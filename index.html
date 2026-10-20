@@ -296,25 +296,28 @@ details[open] summary { margin-bottom: 10px; }
     <details class="card area-backup" open>
       <summary>Synchronizace a záloha dat</summary>
       <div class="bk">
-        <p><b>Automatická synchronizace mezi zařízeními:</b> nastavte níže Firebase Realtime Database. Bez cloudového úložiště nelze samostatným HTML souborem bezpečně synchronizovat různá zařízení. Do té doby zůstávají data uložena místně a lze je přenést zálohou.</p>
+        <p><b>Automatická synchronizace mezi zařízeními:</b> přihlaste se stejným účtem Firebase na každém zařízení. Dosavadní záznamy z tohoto prohlížeče zůstanou zachované a při prvním přihlášení se sloučí s cloudovými.</p>
         <fieldset class="grp"><legend>Cloudová synchronizace (volitelně)</legend>
           <div class="field"><label for="syncUrl">Firebase Database URL</label><input id="syncUrl" type="url" placeholder="https://projekt-default-rtdb.europe-west1.firebasedatabase.app"></div>
-          <div class="field" style="margin-top:10px"><label for="syncKey">Soukromý synchronizační klíč</label><input id="syncKey" type="password" autocomplete="off" placeholder="Dlouhý náhodný klíč sdílený mezi zařízeními"></div>
-          <p class="hint">Použijte stejnou databázi a stejný klíč na každém zařízení. Klíč funguje jako heslo: nesdílejte ho. Nastavení se uloží v tomto prohlížeči.</p>
-          <div class="acts"><button type="button" class="btn" id="saveSync">Uložit nastavení</button><button type="button" class="btn ghost" id="syncNow">Synchronizovat nyní</button></div>
+          <div class="field" style="margin-top:10px"><label for="firebaseApiKey">Firebase Web API klíč</label><input id="firebaseApiKey" type="text" autocomplete="off" placeholder="AIza…"></div>
+          <p class="hint">URL najdete v nastavení Realtime Database, Web API klíč v nastavení projektu Firebase → Vaše aplikace. Klíč Web API je identifikátor aplikace; přístup k datům chrání přihlášení a pravidla níže. Zapněte metodu E‑mail/heslo v Authentication.</p>
+          <div class="field" style="margin-top:10px"><label for="authEmail">E‑mail</label><input id="authEmail" type="email" autocomplete="username" placeholder="vas@email.cz"></div>
+          <div class="field" style="margin-top:10px"><label for="authPassword">Heslo</label><input id="authPassword" type="password" autocomplete="current-password" placeholder="Heslo účtu Firebase"></div>
+          <div class="acts"><button type="button" class="btn" id="saveSync">Uložit nastavení</button><button type="button" class="btn" id="signIn">Přihlásit</button><button type="button" class="btn ghost" id="signUp">Vytvořit účet</button><button type="button" class="btn ghost" id="signOut">Odhlásit</button><button type="button" class="btn ghost" id="syncNow">Synchronizovat nyní</button></div>
           <p class="status" id="syncStatus" role="status" aria-live="polite"></p>
-          <details><summary style="font-size:14px">Jak nastavit Firebase</summary>
-            <p>Vytvořte projekt ve Firebase, zapněte Realtime Database a zkopírujte její URL. V pravidlech databáze povolte přístup pouze pod cestou <code>/fveTrackers/{syncKey}</code> a kořenový přístup ponechte zakázaný. Příklad pravidel pro soukromou cestu (klíč je dlouhý náhodný řetězec):</p>
+          <details><summary style="font-size:14px">Bezpečná pravidla Firebase Realtime Database</summary>
+            <p>V Authentication zapněte poskytovatele E‑mail/heslo. V Realtime Database → Pravidla nahraďte pravidla následujícím JSONem. Každý účet pak může číst a měnit jen vlastní záznamy podle jedinečného Firebase UID:</p>
             <pre style="white-space:pre-wrap;overflow-wrap:anywhere;background:var(--sunk);padding:10px;border-radius:8px;font-size:12px">{
   "rules": {
-    ".read": false,
-    ".write": false,
-    "fveTrackers": {
-      "$syncKey": { ".read": true, ".write": true }
+    "users": {
+      "$uid": {
+        ".read": "auth != null &amp;&amp; auth.uid === $uid",
+        ".write": "auth != null &amp;&amp; auth.uid === $uid"
+      }
     }
   }
 }</pre>
-            <p>Pravidla povolují přístup každému, kdo zná cestu, proto zvolte náhodný klíč dlouhý alespoň 32 znaků. Pro citlivá data použijte databázi s přihlášením a řízením přístupu.</p>
+            <p>Účty vytvořené přes tlačítko výše jsou samostatné; na všech svých zařízeních použijte stejný e‑mail a heslo.</p>
           </details>
         </fieldset>
         <div class="field">
@@ -712,17 +715,41 @@ details[open] summary { margin-bottom: 10px; }
     say('bStatus', 'Načteno ' + d.length + ' záznamů.');
   });
 
-  /* ---------- cloud sync (Firebase Realtime Database REST) ---------- */
-  var syncUrlInput = $('syncUrl'), syncKeyInput = $('syncKey');
+  /* ---------- Firebase Authentication + user-scoped Realtime Database ---------- */
+  var syncUrlInput = $('syncUrl'), apiKeyInput = $('firebaseApiKey');
   syncUrlInput.value = store.get('fveCloudUrl') || '';
-  syncKeyInput.value = store.get('fveCloudKey') || '';
+  apiKeyInput.value = store.get('fveFirebaseApiKey') || '';
+  var authState = null, authBusy = false;
   function syncConfig() {
     var url = String(syncUrlInput.value || '').trim().replace(/\/+$/, '');
-    var key = String(syncKeyInput.value || '').trim();
-    if (!/^https:\/\/[a-zA-Z0-9.-]+(?::[0-9]+)?$/.test(url) || !key || key.length < 24 || /[.#$\[\]\/]/.test(key)) return null;
-    return { url: url, key: key };
+    var apiKey = String(apiKeyInput.value || '').trim();
+    if (!/^https:\/\/[a-zA-Z0-9.-]+(?::[0-9]+)?$/.test(url) || !/^AIza[\w-]{20,}$/.test(apiKey)) return null;
+    return { url: url, apiKey: apiKey };
   }
-  function cloudPath(cfg) { return cfg.url + '/fveTrackers/' + encodeURIComponent(cfg.key) + '.json'; }
+  function cloudPath(cfg) { return cfg.url + '/users/' + encodeURIComponent(authState.localId) + '.json'; }
+  function authError(code) {
+    var messages = { EMAIL_EXISTS:'Tento e-mail už má účet. Přihlaste se.', INVALID_EMAIL:'Zkontrolujte formát e-mailu.', WEAK_PASSWORD:'Heslo musí mít alespoň 6 znaků.', INVALID_LOGIN_CREDENTIALS:'E-mail nebo heslo není správné.', EMAIL_NOT_FOUND:'Účet s tímto e-mailem nebyl nalezen.', INVALID_PASSWORD:'E-mail nebo heslo není správné.', USER_DISABLED:'Tento účet je vypnutý.', TOO_MANY_ATTEMPTS_TRY_LATER:'Příliš mnoho pokusů. Zkuste to později.', OPERATION_NOT_ALLOWED:'Ve Firebase zapněte přihlášení e-mailem a heslem.', API_KEY_INVALID:'Zkontrolujte Firebase Web API klíč.' };
+    return messages[code] || ('Firebase: ' + String(code || 'neznámá chyba').replace(/_/g, ' '));
+  }
+  async function authRequest(endpoint, body) {
+    var cfg = syncConfig();
+    if (!cfg) throw new Error('Nejdřív zadejte platnou Firebase URL a Web API klíč.');
+    var res = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:' + endpoint + '?key=' + encodeURIComponent(cfg.apiKey), { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    var json = await res.json();
+    if (!res.ok) throw new Error(authError(json && json.error && json.error.message));
+    return json;
+  }
+  async function refreshAuth() {
+    var token = store.get('fveRefreshToken'), cfg = syncConfig();
+    if (!token || !cfg) return false;
+    var res = await fetch('https://securetoken.googleapis.com/v1/token?key=' + encodeURIComponent(cfg.apiKey), {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'grant_type=refresh_token&refresh_token=' + encodeURIComponent(token)});
+    var json = await res.json();
+    if (!res.ok) { store.set('fveRefreshToken',''); authState = null; return false; }
+    authState = { idToken:json.id_token, refreshToken:json.refresh_token, localId:json.user_id, expiresAt:Date.now() + (Number(json.expires_in) || 3600) * 1000 };
+    store.set('fveRefreshToken', json.refresh_token);
+    return true;
+  }
+  function cloudStatus() { if (authState) say('syncStatus', 'Přihlášeno. Synchronizace je zapnutá.'); }
   function mergeRecords(local, remote) {
     var map = {};
     local.concat(remote).forEach(function (x) {
@@ -733,14 +760,17 @@ details[open] summary { margin-bottom: 10px; }
   }
   async function doSync(manual) {
     var cfg = syncConfig();
-    if (!cfg) { if (manual) say('syncStatus', 'Zadejte platnou HTTPS Firebase URL a synchronizační klíč alespoň 24 znaků bez znaků . # $ [ ] /. ', true); return; }
+    if (!cfg) { if (manual) say('syncStatus', 'Zadejte platnou Firebase URL a Web API klíč.', true); return; }
+    if (!authState && !(await refreshAuth())) { if (manual) say('syncStatus', 'Pro synchronizaci se nejdřív přihlaste ke svému účtu Firebase.', true); return; }
+    if (authState && authState.expiresAt && authState.expiresAt < Date.now() + 60000 && !(await refreshAuth())) { if (manual) say('syncStatus', 'Přihlášení vypršelo. Přihlaste se znovu.', true); return; }
     if (syncing) return;
     syncing = true;
     if (manual) say('syncStatus', 'Probíhá synchronizace…');
     try {
       var path = cloudPath(cfg), attempts = 0, completed = false;
       while (attempts++ < 6 && !completed) {
-        var response = await fetch(path, { cache: 'no-store', headers: { 'X-Firebase-ETag': 'true' } });
+        var response = await fetch(path + '?auth=' + encodeURIComponent(authState.idToken), { cache: 'no-store', headers: { 'X-Firebase-ETag': 'true' } });
+        if (response.status === 401 || response.status === 403) throw new Error('Přístup zamítnut. Zkontrolujte přihlášení, URL databáze a pravidla Firebase.');
         if (!response.ok) throw new Error('Cloud nelze přečíst (HTTP ' + response.status + '). Zkontrolujte URL a pravidla Firebase.');
         var etag = response.headers.get('ETag');
         if (!etag) throw new Error('Firebase neposkytl ETag. Zkontrolujte URL Realtime Database. Data nebyla změněna.');
@@ -758,15 +788,16 @@ details[open] summary { margin-bottom: 10px; }
         var payload = { data: merged, cena: mergedPrice, priceUpdatedAt: Math.max(remotePriceTime, mergedPriceTime), updatedAt: Date.now() };
         var shouldWrite = cloud === null || JSON.stringify(remote) !== JSON.stringify(merged) || +cloud.priceUpdatedAt !== payload.priceUpdatedAt || parseFloat(cloud.cena) !== mergedPrice;
         if (shouldWrite) {
-          var put = await fetch(path, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'If-Match': etag }, body: JSON.stringify(payload) });
+          var put = await fetch(path + '?auth=' + encodeURIComponent(authState.idToken), { method: 'PUT', headers: { 'Content-Type': 'application/json', 'If-Match': etag }, body: JSON.stringify(payload) });
           if (put.status === 412) continue;
+          if (put.status === 401 || put.status === 403) throw new Error('Zápis zamítnut. Zkontrolujte přihlášení a pravidla Firebase.');
           if (!put.ok) throw new Error('Cloud nelze aktualizovat (HTTP ' + put.status + '). Místní data zůstala zachována.');
         }
         d = mergeRecords(d, merged); prc = mergedPrice;
         store.set('fveD', JSON.stringify(d)); store.set('fveP', String(prc));
         if (mergedPriceTime) store.set('fvePriceUpdatedAt', String(mergedPriceTime));
         pI.value = prc.toFixed(1); buildEntryYears(); render(); fillFromExisting(); completed = true;
-        if (manual) say('syncStatus', cloud === null ? 'Cloud byl bezpečně inicializován. Data jsou připravena k synchronizaci mezi zařízeními.' : 'Synchronizováno. V zařízení i cloudu je ' + d.length + ' záznamů.');
+        if (manual) say('syncStatus', cloud === null ? 'Cloud byl inicializován. Místní data jsou připravena k synchronizaci mezi zařízeními.' : 'Synchronizováno. V zařízení i cloudu je ' + d.length + ' záznamů.');
       }
       if (!completed) throw new Error('Data se mezitím měnila na jiném zařízení. Synchronizaci zopakujte. Místní data zůstala zachována.');
     } catch (err) {
@@ -780,10 +811,29 @@ details[open] summary { margin-bottom: 10px; }
   }
   $('saveSync').addEventListener('click', function () {
     var cfg = syncConfig();
-    if (!cfg) { say('syncStatus', 'Zadejte platnou HTTPS Firebase URL a klíč alespoň 24 znaků bez znaků . # $ [ ] /.', true); return; }
-    store.set('fveCloudUrl', cfg.url); store.set('fveCloudKey', cfg.key);
-    say('syncStatus', 'Nastavení uloženo. Probíhá první synchronizace…'); doSync(true);
+    if (!cfg) { say('syncStatus', 'Zadejte platnou Firebase URL a Web API klíč.', true); return; }
+    store.set('fveCloudUrl', cfg.url); store.set('fveFirebaseApiKey', cfg.apiKey);
+    say('syncStatus', 'Nastavení uloženo. Nyní se přihlaste ke svému účtu.');
   });
+  async function signIn(create) {
+    if (authBusy) return;
+    var cfg = syncConfig(), email = String($('authEmail').value || '').trim(), password = $('authPassword').value;
+    if (!cfg) { say('syncStatus','Zadejte a uložte platnou Firebase URL a Web API klíč.',true); return; }
+    if (!email || !password) { say('syncStatus','Vyplňte e-mail a heslo.',true); return; }
+    authBusy = true;
+    try {
+      var result = await authRequest(create ? 'signUp' : 'signInWithPassword', {email:email,password:password,returnSecureToken:true});
+      authState = {idToken:result.idToken,refreshToken:result.refreshToken,localId:result.localId,email:result.email,expiresAt:Date.now() + (Number(result.expiresIn) || 3600) * 1000};
+      store.set('fveCloudUrl',cfg.url); store.set('fveFirebaseApiKey',cfg.apiKey); store.set('fveRefreshToken',result.refreshToken);
+      $('authPassword').value = '';
+      say('syncStatus', (create ? 'Účet vytvořen' : 'Přihlášení úspěšné') + ' (' + result.email + '). Probíhá sloučení místních a cloudových dat…');
+      await doSync(true);
+    } catch (err) { authState=null; say('syncStatus',err.message || 'Přihlášení se nezdařilo.',true); }
+    finally { authBusy=false; }
+  }
+  $('signIn').addEventListener('click',function(){signIn(false);});
+  $('signUp').addEventListener('click',function(){signIn(true);});
+  $('signOut').addEventListener('click',function(){authState=null;store.set('fveRefreshToken','');say('syncStatus','Odhlášeno. Místní data zůstala v tomto zařízení.');});
   $('syncNow').addEventListener('click', function () { doSync(true); });
   window.addEventListener('online', function () { doSync(false); });
   window.addEventListener('focus', function () { doSync(false); });
@@ -794,7 +844,7 @@ details[open] summary { margin-bottom: 10px; }
   buildEntryYears();
   selectNextMonth();
   render();
-  if (syncConfig()) doSync(false);
+  if (syncConfig()) refreshAuth().then(function(ok){if(ok)doSync(false);});
 })();
 
 (function () {
