@@ -236,7 +236,7 @@ details[open] summary { margin-bottom: 10px; }
     <form class="card area-form" id="fveForm" novalidate>
       <h2>Zapsat měsíc</h2>
       <div class="row">
-        <div class="field"><label for="inpY">Rok</label><select id="inpY"></select></div>
+        <div class="field"><label for="inpY">Rok</label><select id="inpY"><option value="2021">2021</option><option value="2022">2022</option><option value="2023">2023</option><option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option><option value="2030">2030</option><option value="2031">2031</option><option value="2032">2032</option></select></div>
         <div class="field"><label for="inpM">Měsíc</label>
           <select id="inpM">
             <option value="1">Leden</option><option value="2">Únor</option><option value="3">Březen</option>
@@ -293,10 +293,30 @@ details[open] summary { margin-bottom: 10px; }
       </section>
     </div>
 
-    <details class="card area-backup">
-      <summary>Záloha a přenos dat</summary>
+    <details class="card area-backup" open>
+      <summary>Synchronizace a záloha dat</summary>
       <div class="bk">
-        <p>Záznamy jsou uložené jen v tomto prohlížeči. Do jiného zařízení je přeneste zálohou: na jednom ji zkopírujte, na druhém vložte do pole a načtěte.</p>
+        <p><b>Automatická synchronizace mezi zařízeními:</b> nastavte níže Firebase Realtime Database. Bez cloudového úložiště nelze samostatným HTML souborem bezpečně synchronizovat různá zařízení. Do té doby zůstávají data uložena místně a lze je přenést zálohou.</p>
+        <fieldset class="grp"><legend>Cloudová synchronizace (volitelně)</legend>
+          <div class="field"><label for="syncUrl">Firebase Database URL</label><input id="syncUrl" type="url" placeholder="https://projekt-default-rtdb.europe-west1.firebasedatabase.app"></div>
+          <div class="field" style="margin-top:10px"><label for="syncKey">Soukromý synchronizační klíč</label><input id="syncKey" type="password" autocomplete="off" placeholder="Dlouhý náhodný klíč sdílený mezi zařízeními"></div>
+          <p class="hint">Použijte stejnou databázi a stejný klíč na každém zařízení. Klíč funguje jako heslo: nesdílejte ho. Nastavení se uloží v tomto prohlížeči.</p>
+          <div class="acts"><button type="button" class="btn" id="saveSync">Uložit nastavení</button><button type="button" class="btn ghost" id="syncNow">Synchronizovat nyní</button></div>
+          <p class="status" id="syncStatus" role="status" aria-live="polite"></p>
+          <details><summary style="font-size:14px">Jak nastavit Firebase</summary>
+            <p>Vytvořte projekt ve Firebase, zapněte Realtime Database a zkopírujte její URL. V pravidlech databáze povolte přístup pouze pod cestou <code>/fveTrackers/{syncKey}</code> a kořenový přístup ponechte zakázaný. Příklad pravidel pro soukromou cestu (klíč je dlouhý náhodný řetězec):</p>
+            <pre style="white-space:pre-wrap;overflow-wrap:anywhere;background:var(--sunk);padding:10px;border-radius:8px;font-size:12px">{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "fveTrackers": {
+      "$syncKey": { ".read": true, ".write": true }
+    }
+  }
+}</pre>
+            <p>Pravidla povolují přístup každému, kdo zná cestu, proto zvolte náhodný klíč dlouhý alespoň 32 znaků. Pro citlivá data použijte databázi s přihlášením a řízením přístupu.</p>
+          </details>
+        </fieldset>
         <div class="field">
           <label for="backupText">Text zálohy</label>
           <textarea id="backupText" spellcheck="false" placeholder="Sem vložte zálohu, nebo vyberte soubor níže."></textarea>
@@ -344,7 +364,8 @@ details[open] summary { margin-bottom: 10px; }
         id: isFinite(+x.id) ? +x.id : Date.now() + i,
         year: year, month: month, energy: energy,
         grid: isFinite(g) && g >= 0 ? g : 0,
-        savedPrice: isFinite(sp) && sp >= 0 ? sp : 5
+        savedPrice: isFinite(sp) && sp >= 0 ? sp : 5,
+        updatedAt: isFinite(+x.updatedAt) && +x.updatedAt >= 0 ? +x.updatedAt : 0
       };
       ['eStart', 'eEnd', 'gStart', 'gEnd'].forEach(function (k) {
         var n = parseFloat(x[k]);
@@ -360,7 +381,11 @@ details[open] summary { margin-bottom: 10px; }
   var p0 = parseFloat(store.get('fveP'));
   var prc = isFinite(p0) && p0 >= 0 ? p0 : 5;
 
-  function save() { store.set('fveD', JSON.stringify(d)); store.set('fveP', String(prc)); }
+  var syncing = false, syncTimer = null;
+  function save() {
+    store.set('fveD', JSON.stringify(d)); store.set('fveP', String(prc));
+    if (!syncing) scheduleSync();
+  }
 
   var SAMPLE_E = [22, 45, 90, 140, 175, 190, 195, 180, 130, 70, 30, 15];
   var SAMPLE_G = [150, 120, 80, 40, 20, 10, 8, 12, 45, 90, 130, 160];
@@ -369,7 +394,7 @@ details[open] summary { margin-bottom: 10px; }
     for (var m = 1; m <= cM; m++) out.push({ id: -m, year: cY, month: m, energy: SAMPLE_E[m - 1], grid: SAMPLE_G[m - 1], savedPrice: 5 });
     return out;
   }
-  function V() { return d.length ? d : sample(); }
+  function V() { return d; }
 
   var fy = null, ft = 'all', view = 'm', pendDel = null, pendImp = false, prefilled = false;
 
@@ -377,19 +402,27 @@ details[open] summary { margin-bottom: 10px; }
   var iY = $('inpY'), iM = $('inpM'), iEs = $('inpEs'), iEe = $('inpEe'), iGs = $('inpGs'), iGe = $('inpGe'), pI = $('kwPrice');
 
   function buildEntryYears() {
-    var min = cY - 5, max = cY + 1;
+    // Populate years defensively: keep a usable list on mobile Safari and retain historical data years.
+    var min = cY - 10, max = cY + 2;
     d.forEach(function (x) { if (x.year < min) min = x.year; if (x.year + 1 > max) max = x.year + 1; });
-    var keep = iY.value, html = '';
+    min = Math.max(1990, min); max = Math.min(2100, max);
+    var keep = String(iY.value || cY), html = '';
     for (var y = max; y >= min; y--) html += '<option value="' + y + '">' + y + '</option>';
     iY.innerHTML = html;
-    iY.value = keep && iY.querySelector('option[value="' + keep + '"]') ? keep : String(cY);
+    iY.value = keep;
+    if (iY.value !== keep) iY.value = String(cY);
+    // Last-resort fallback if a browser fails to populate the generated options.
+    if (!iY.options.length) {
+      for (var fy0 = cY + 1; fy0 >= cY - 5; fy0--) iY.add(new Option(String(fy0), String(fy0)));
+      iY.value = String(cY);
+    }
   }
 
   /* ---------- rendering ---------- */
   function renderNotes() {
     var h = '';
     if (!storageOk) h += '<div class="note"><b>Ukládání je vypnuté.</b> Prohlížeč nepovoluje ukládání dat, záznamy po zavření stránky zmizí. Používejte zálohu níže.</div>';
-    if (!d.length) h += '<div class="note"><b>Ukázková data.</b> Po uložení prvního měsíce nebo načtení zálohy zmizí.</div>';
+    if (!d.length) h += '<div class="note"><b>Zatím žádné záznamy.</b> Po uložení prvního měsíce se zde zobrazí vaše skutečná data.</div>';
     $('notes').innerHTML = h;
     $('notes').hidden = !h;
   }
@@ -497,7 +530,7 @@ details[open] summary { margin-bottom: 10px; }
   }
 
   /* ---------- entry form ---------- */
-  var HINT = 'Cena za kWh se uloží s každým měsícem zvlášť.';
+  var HINT = 'Cena za kWh se ukládá pro každý měsíc zvlášť. Měřidla Antik Smart Home začínají každý nový rok od 0; během roku se počáteční stav navazuje na poslední zaznamenaný konečný stav.';
   function setVal(el, n) { el.value = (typeof n === 'number' && isFinite(n)) ? String(n) : ''; }
   function diff(s1, e1) {
     var a = parseFloat(s1), b = parseFloat(e1);
@@ -527,29 +560,31 @@ details[open] summary { margin-bottom: 10px; }
       setVal(iEs, ex.eStart); setVal(iEe, ex.eEnd); setVal(iGs, ex.gStart); setVal(iGe, ex.gEnd);
       hint.textContent = MN[mo - 1] + ' ' + y + ' už je zapsaný. Uložením ho přepíšete.';
     } else {
+      // Antik Smart Home resetuje počitadla na začátku roku; uvnitř roku se navazuje na poslední záznam.
       var eRec = prevEnd(y, mo, 'eEnd'), gRec = prevEnd(y, mo, 'gEnd');
-      if (eRec) setVal(iEs, eRec.eEnd);
-      if (gRec) setVal(iGs, gRec.gEnd);
-      var src = '';
-      if (mo === 1) { setVal(iEs, 0); setVal(iGs, 0); src = 'Nový rok začíná od nuly, počáteční stavy jsou nastavené na 0. '; }
-      if (eRec || gRec) {
-        src = (eRec && gRec && eRec.id === gRec.id) ? 'z konce měsíce ' + MN[eRec.month - 1] + ' ' + eRec.year : 'z posledních zapsaných stavů';
-        src = 'Počáteční stavy jsou převzaté ' + src + '. ';
-      }
-      if (ex) hint.textContent = MN[mo - 1] + ' ' + y + ' je zapsaný jen jako spotřeba (' + f1(ex.energy) + ' kWh slunce, ' + f1(ex.grid) + ' kWh síť). Zadáním stavů ho přepíšete. ' + src;
+      setVal(iEs, eRec ? eRec.eEnd : 0);
+      setVal(iGs, gRec ? gRec.gEnd : 0);
+      var src = mo === 1
+        ? 'Nový rok začíná od 0, proto jsou počáteční stavy nastavené na 0. '
+        : 'Počáteční stavy navazují na poslední záznam v tomto roce; zkontrolujte je, pokud některý měsíc chybí. ';
+      if (ex) hint.textContent = MN[mo - 1] + ' ' + y + ' je zapsaný jen jako souhrn (' + f1(ex.energy) + ' kWh slunce, ' + f1(ex.grid) + ' kWh síť). Zadáním stavů ho přepíšete. ' + src;
       else hint.textContent = src + HINT;
     }
     updateCalc();
   }
+  // Najde poslední zaznamenaný konečný stav před vybraným měsícem v témže roce.
+  // V lednu se návaznost neuplatní, protože počitadla Antik Smart Home začínají od 0.
   function prevEnd(y, mo, key) {
-    var best = null, cur = y * 100 + mo;
+    if (mo <= 1) return null;
+    var best = null;
     d.forEach(function (x) {
-      var k = x.year * 100 + x.month;
-      if (x[key] === undefined || x.year !== y || k >= cur) return;
-      if (!best || k > best.year * 100 + best.month) best = x;
+      if (x.year === y && x.month < mo && x[key] !== undefined && isFinite(Number(x[key]))) {
+        if (!best || x.month > best.month) best = x;
+      }
     });
     return best;
   }
+
   function selectNextMonth() {
     var last = null;
     d.forEach(function (x) { if (!last || x.year * 100 + x.month > last.year * 100 + last.month) last = x; });
@@ -571,12 +606,14 @@ details[open] summary { margin-bottom: 10px; }
     var es = parseFloat(iEs.value), ee = parseFloat(iEe.value), gs = parseFloat(iGs.value), ge = parseFloat(iGe.value);
     if (![es, ee, gs, ge].every(function (n) { return isFinite(n) && n >= 0; })) { say('fStatus', 'Vyplňte všechny čtyři stavy jako čísla od nuly výš.', true); return; }
     if (ee < es || ge < gs) { say('fStatus', 'Konečný stav nesmí být nižší než počáteční.', true); return; }
-    var eMin = prevEnd(y, mo, 'eEnd'), gMin = prevEnd(y, mo, 'gEnd');
-    if (eMin && es < eMin.eEnd - 1e-9) { say('fStatus', 'Počáteční stav slunce (' + f1(es) + ') nesmí být nižší než konečný stav z měsíce ' + MN[eMin.month - 1] + ' ' + eMin.year + ' (' + f1(eMin.eEnd) + ').', true); return; }
-    if (gMin && gs < gMin.gEnd - 1e-9) { say('fStatus', 'Počáteční stav sítě (' + f1(gs) + ') nesmí být nižší než konečný stav z měsíce ' + MN[gMin.month - 1] + ' ' + gMin.year + ' (' + f1(gMin.gEnd) + ').', true); return; }
+    var prevE = prevEnd(y, mo, 'eEnd'), prevG = prevEnd(y, mo, 'gEnd');
+    if ((prevE && es < Number(prevE.eEnd) - 1e-9) || (prevG && gs < Number(prevG.gEnd) - 1e-9)) {
+      say('fStatus', 'Počáteční stav během roku nesmí být nižší než poslední zaznamenaný konečný stav. Pro leden se počítadla resetují na 0.', true); return;
+    }
+
     var en = Math.round((ee - es) * 1000) / 1000, gr = Math.round((ge - gs) * 1000) / 1000;
     d.forEach(function (x, i) { if (x.year === y && x.month === mo) idx = i; });
-    var rec = { year: y, month: mo, energy: en, grid: gr, savedPrice: prc, eStart: es, eEnd: ee, gStart: gs, gEnd: ge };
+    var rec = { year: y, month: mo, energy: en, grid: gr, savedPrice: prc, eStart: es, eEnd: ee, gStart: gs, gEnd: ge, updatedAt: Date.now() };
     if (idx >= 0) { rec.id = d[idx].id; d[idx] = rec; } else { rec.id = Date.now(); d.push(rec); }
     save(); fy = y; buildEntryYears();
     var nxY = mo === 12 ? y + 1 : y, nxM = mo === 12 ? 1 : mo + 1;
@@ -588,7 +625,7 @@ details[open] summary { margin-bottom: 10px; }
   pI.value = prc.toFixed(1);
   pI.addEventListener('input', function () {
     var v = parseFloat(pI.value);
-    if (isFinite(v) && v >= 0) { prc = v; store.set('fveP', String(prc)); }
+    if (isFinite(v) && v >= 0) { prc = v; store.set('fveP', String(prc)); store.set('fvePriceUpdatedAt', String(Date.now())); scheduleSync(); }
   });
   pI.addEventListener('change', function () { pI.value = prc.toFixed(1); });
 
@@ -653,8 +690,11 @@ details[open] summary { margin-bottom: 10px; }
   function parseBackup(txt) {
     var o;
     try { o = JSON.parse(String(txt).trim()); } catch (e) { return null; }
-    var list = clean(Array.isArray(o) ? o : (o && o.data));
-    return list.length ? { list: list, cena: o && parseFloat(o.cena) } : null;
+    var raw = Array.isArray(o) ? o : (o && o.data);
+    if (!Array.isArray(raw) || !raw.length) return null;
+    var list = clean(raw);
+    if (!list.length || list.length !== raw.length) return null;
+    return { list: list, cena: o && parseFloat(o.cena) };
   }
 
   importBtn.addEventListener('click', function () {
@@ -672,10 +712,83 @@ details[open] summary { margin-bottom: 10px; }
     say('bStatus', 'Načteno ' + d.length + ' záznamů.');
   });
 
+  /* ---------- cloud sync (Firebase Realtime Database REST) ---------- */
+  var syncUrlInput = $('syncUrl'), syncKeyInput = $('syncKey');
+  syncUrlInput.value = store.get('fveCloudUrl') || '';
+  syncKeyInput.value = store.get('fveCloudKey') || '';
+  function syncConfig() {
+    var url = String(syncUrlInput.value || '').trim().replace(/\/+$/, '');
+    var key = String(syncKeyInput.value || '').trim();
+    if (!/^https:\/\/[a-zA-Z0-9.-]+(?::[0-9]+)?$/.test(url) || !key || key.length < 24 || /[.#$\[\]\/]/.test(key)) return null;
+    return { url: url, key: key };
+  }
+  function cloudPath(cfg) { return cfg.url + '/fveTrackers/' + encodeURIComponent(cfg.key) + '.json'; }
+  function mergeRecords(local, remote) {
+    var map = {};
+    local.concat(remote).forEach(function (x) {
+      var k = x.year + '-' + x.month, old = map[k];
+      if (!old || (+x.updatedAt || 0) >= (+old.updatedAt || 0)) map[k] = x;
+    });
+    return Object.keys(map).map(function (k) { return map[k]; }).sort(function (a,b) { return a.year-b.year || a.month-b.month; });
+  }
+  async function doSync(manual) {
+    var cfg = syncConfig();
+    if (!cfg) { if (manual) say('syncStatus', 'Zadejte platnou HTTPS Firebase URL a synchronizační klíč alespoň 24 znaků bez znaků . # $ [ ] /.', true); return; }
+    if (syncing) return;
+    syncing = true;
+    try {
+      var path = cloudPath(cfg);
+      var response = await fetch(path, { cache: 'no-store' });
+      if (!response.ok) throw new Error('Cloud nelze přečíst (HTTP ' + response.status + '). Zkontrolujte URL a pravidla Firebase.');
+      var cloud = await response.json();
+      if (!cloud || !Array.isArray(cloud.data)) {
+        // First device to configure this key seeds the cloud; an empty local dataset is also valid.
+        cloud = { data: d, cena: prc, priceUpdatedAt: Date.now(), updatedAt: Date.now() };
+        var seed = await fetch(path, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cloud) });
+        if (!seed.ok) throw new Error('Cloud nelze inicializovat (HTTP ' + seed.status + '). Zkontrolujte pravidla Firebase.');
+        if (manual) say('syncStatus', 'Cloud byl inicializován. Data jsou připravena k synchronizaci mezi zařízeními.');
+      } else {
+        var remote = clean(cloud.data), merged = mergeRecords(d, remote);
+        var localJson = JSON.stringify(d), mergedJson = JSON.stringify(merged);
+        var remotePriceTime = +cloud.priceUpdatedAt || 0;
+        if (remotePriceTime > (+store.get('fvePriceUpdatedAt') || 0)) {
+          var cp = parseFloat(cloud.cena); if (isFinite(cp) && cp >= 0) prc = cp;
+          store.set('fvePriceUpdatedAt', String(remotePriceTime)); pI.value = prc.toFixed(1);
+        }
+        d = merged;
+        if (localJson !== mergedJson || JSON.stringify(remote) !== mergedJson) {
+          var payload = { data: d, cena: prc, priceUpdatedAt: Math.max(remotePriceTime, +store.get('fvePriceUpdatedAt') || 0), updatedAt: Date.now() };
+          var put = await fetch(path, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          if (!put.ok) throw new Error('Cloud nelze aktualizovat (HTTP ' + put.status + ').');
+        }
+        store.set('fveD', JSON.stringify(d)); store.set('fveP', String(prc));
+        buildEntryYears(); render(); fillFromExisting();
+        if (manual) say('syncStatus', 'Synchronizováno. V zařízení i cloudu je ' + d.length + ' záznamů.');
+      }
+    } catch (err) {
+      if (manual) say('syncStatus', 'Synchronizace se nezdařila: ' + (err && err.message ? err.message : 'chyba připojení') + ' Data zůstala uložena místně.', true);
+    } finally { syncing = false; }
+  }
+  function scheduleSync() {
+    if (!syncConfig()) return;
+    if (syncTimer) clearTimeout(syncTimer);
+    syncTimer = setTimeout(function () { doSync(false); }, 700);
+  }
+  $('saveSync').addEventListener('click', function () {
+    var cfg = syncConfig();
+    if (!cfg) { say('syncStatus', 'Zadejte platnou HTTPS Firebase URL a klíč alespoň 24 znaků bez znaků . # $ [ ] /.', true); return; }
+    store.set('fveCloudUrl', cfg.url); store.set('fveCloudKey', cfg.key);
+    say('syncStatus', 'Nastavení uloženo. Probíhá první synchronizace…'); doSync(true);
+  });
+  $('syncNow').addEventListener('click', function () { doSync(true); });
+  window.addEventListener('online', function () { doSync(false); });
+  window.addEventListener('focus', function () { doSync(false); });
+
   /* ---------- start ---------- */
   buildEntryYears();
   selectNextMonth();
   render();
+  if (syncConfig()) doSync(false);
 })();
 
 (function () {
