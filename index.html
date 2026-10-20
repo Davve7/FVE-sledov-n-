@@ -177,6 +177,8 @@ form .btn { width: 100%; margin-top: 4px; }
   @media (max-width:420px) { .compare-grid { grid-template-columns:1fr; } }
 
   /* Tabs and records */
+.tariff-prices { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin: 0 0 12px; }
+.tariff-prices .field input { width:100%; }
 .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; background: var(--sunk); border-radius: 10px; padding: 3px; margin-bottom: 14px; }
 .tab { border: 0; background: none; border-radius: 8px; padding: 10px; font-weight: 700; color: var(--muted); cursor: pointer; min-height: 40px; }
 .tab[aria-selected="true"] { background: var(--surface); color: var(--sun-ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12); }
@@ -272,13 +274,27 @@ details[open] summary { margin-bottom: 10px; }
         <p class="calc">Vyrobeno: <b id="calcE">–</b></p>
       </fieldset>
       <fieldset class="grp g">
-        <legend>Síť (dokup)</legend>
+        <legend>Elektroměr – vysoký tarif (VT)</legend>
         <div class="row">
-          <div class="field"><label for="inpGs">Počáteční stav</label><input type="number" id="inpGs" step="any" min="0" inputmode="decimal" placeholder="kWh"></div>
-          <div class="field"><label for="inpGe">Konečný stav</label><input type="number" id="inpGe" step="any" min="0" inputmode="decimal" placeholder="kWh"></div>
+          <div class="field"><label for="inpVts">Počáteční stav (kWh)</label><input type="number" id="inpVts" step="any" min="0" inputmode="decimal" placeholder="kWh"></div>
+          <div class="field"><label for="inpVte">Konečný stav (kWh)</label><input type="number" id="inpVte" step="any" min="0" inputmode="decimal" placeholder="kWh"></div>
         </div>
-        <p class="calc">Dokoupeno: <b id="calcG">–</b></p>
+        <p class="calc">Odběr VT: <b id="calcVT">–</b></p>
       </fieldset>
+      <fieldset class="grp g">
+        <legend>Elektroměr – nízký tarif (NT)</legend>
+        <div class="row">
+          <div class="field"><label for="inpNts">Počáteční stav (kWh)</label><input type="number" id="inpNts" step="any" min="0" inputmode="decimal" placeholder="kWh"></div>
+          <div class="field"><label for="inpNte">Konečný stav (kWh)</label><input type="number" id="inpNte" step="any" min="0" inputmode="decimal" placeholder="kWh"></div>
+        </div>
+        <p class="calc">Odběr NT: <b id="calcNT">–</b></p>
+      </fieldset>
+      <div class="tariff-prices">
+        <div class="field"><label for="priceVT">Cena VT (Kč/kWh)</label><input type="number" id="priceVT" step="0.01" min="0" inputmode="decimal" placeholder="Zadej cenu VT"></div>
+        <div class="field"><label for="priceNT">Cena NT (Kč/kWh)</label><input type="number" id="priceNT" step="0.01" min="0" inputmode="decimal" placeholder="Zadej cenu NT"></div>
+      </div>
+      <p class="calc">Odhad nákladů na odběr ze sítě: <b id="calcCost">–</b></p>
+      <p class="hint">Zadej cenu za 1 kWh včetně distribuce a dalších proměnných poplatků, pokud chceš odhad skutečných nákladů. Fixní měsíční platby se do výpočtu nezahrnují.</p>
       <button type="submit" class="btn">Uložit záznam</button>
       <p class="hint" id="fHint">Cena za kWh se uloží s každým měsícem zvlášť.</p>
       <p class="status" id="fStatus" role="status" aria-live="polite"></p>
@@ -383,6 +399,11 @@ details[open] summary { margin-bottom: 10px; }
   };
   try { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); } catch (e) { storageOk = false; }
 
+  function gridCost(x) {
+    if (x.priceVT !== undefined && x.priceNT !== undefined && x.vtStart !== undefined && x.vtEnd !== undefined && x.ntStart !== undefined && x.ntEnd !== undefined) return Math.max(0, x.vtEnd-x.vtStart) * x.priceVT + Math.max(0, x.ntEnd-x.ntStart) * x.priceNT;
+    return x.grid * x.savedPrice;
+  }
+
   function clean(arr) {
     if (!Array.isArray(arr)) return [];
     var out = [], seen = {};
@@ -400,7 +421,7 @@ details[open] summary { margin-bottom: 10px; }
         savedPrice: isFinite(sp) && sp >= 0 ? sp : 4.5,
         updatedAt: isFinite(+x.updatedAt) && +x.updatedAt >= 0 ? +x.updatedAt : 0
       };
-      ['eStart', 'eEnd', 'gStart', 'gEnd'].forEach(function (k) {
+      ['eStart', 'eEnd', 'gStart', 'gEnd', 'vtStart', 'vtEnd', 'ntStart', 'ntEnd', 'priceVT', 'priceNT'].forEach(function (k) {
         var n = parseFloat(x[k]);
         if (isFinite(n) && n >= 0) rec[k] = n;
       });
@@ -434,7 +455,10 @@ details[open] summary { margin-bottom: 10px; }
   var fy = null, ft = 'all', view = 'm', pendDel = null, pendImp = false, prefilled = false;
 
   /* ---------- selects ---------- */
-  var iY = $('inpY'), iM = $('inpM'), iEs = $('inpEs'), iEe = $('inpEe'), iGs = $('inpGs'), iGe = $('inpGe'), pI = $('kwPrice');
+  var iY = $('inpY'), iM = $('inpM'), iEs = $('inpEs'), iEe = $('inpEe'), iVts = $('inpVts'), iVte = $('inpVte'), iNts = $('inpNts'), iNte = $('inpNte'), priceVTEl = $('priceVT'), priceNTEl = $('priceNT'), pI = $('kwPrice');
+  var priceVT = parseFloat(store.get('fvePriceVT')), priceNT = parseFloat(store.get('fvePriceNT'));
+  if (!isFinite(priceVT) || priceVT < 0) priceVT = null;
+  if (!isFinite(priceNT) || priceNT < 0) priceNT = null;
 
   function buildEntryYears() {
     // Entry form starts at 2026; older records remain available in history.
@@ -463,7 +487,7 @@ details[open] summary { margin-bottom: 10px; }
 
   function renderStats() {
     var v = V(), tE = 0, tG = 0, tS = 0, tC = 0;
-    v.forEach(function (x) { tE += x.energy; tG += x.grid; tS += x.energy * x.savedPrice; tC += x.grid * x.savedPrice; });
+    v.forEach(function (x) { tE += x.energy; tG += x.grid; tS += x.energy * x.savedPrice; tC += gridCost(x); });
     var con = tE + tG, pct = con > 0 ? (tE / con) * 100 : 0;
     $('sTot').textContent = f1(tE) + ' kWh';
     $('sTotK').textContent = 'Úspora: ' + f1(tS) + ' Kč';
@@ -542,8 +566,14 @@ details[open] summary { margin-bottom: 10px; }
   }
 
   function readingsHtml(x) {
-    if (x.eStart === undefined || x.eEnd === undefined || x.gStart === undefined || x.gEnd === undefined) return '';
-    return '<p class="rd2">Stavy: slunce ' + f1(x.eStart) + ' → ' + f1(x.eEnd) + ' · síť ' + f1(x.gStart) + ' → ' + f1(x.gEnd) + '</p>';
+    var out = '';
+    if (x.eStart !== undefined && x.eEnd !== undefined) out += 'FVE ' + f1(x.eStart) + ' → ' + f1(x.eEnd);
+    if (x.vtStart !== undefined && x.vtEnd !== undefined) out += (out ? ' · ' : '') + 'VT ' + f1(x.vtStart) + ' → ' + f1(x.vtEnd);
+    if (x.ntStart !== undefined && x.ntEnd !== undefined) out += (out ? ' · ' : '') + 'NT ' + f1(x.ntStart) + ' → ' + f1(x.ntEnd);
+    if (!out && x.gStart !== undefined && x.gEnd !== undefined) out = 'Síť ' + f1(x.gStart) + ' → ' + f1(x.gEnd);
+    if (!out) return '';
+    if (x.priceVT !== undefined && x.priceNT !== undefined) out += ' · ceny VT/NT ' + f1(x.priceVT) + '/' + f1(x.priceNT) + ' Kč/kWh';
+    return '<p class="rd2">Odečty: ' + out + '</p>';
   }
 
   function renderList() {
@@ -556,7 +586,7 @@ details[open] summary { margin-bottom: 10px; }
     $('listM').innerHTML = rows.length ? rows.map(function (x) {
       return '<article class="rec"><div class="rh"><h3>' + MN[x.month - 1] + ' <span>' + x.year + '</span></h3>' +
              '<span class="tag">' + f1(x.savedPrice) + ' Kč/kWh</span></div><div class="rd">' + delHtml(x.id) + '</div>' +
-             valsHtml(x.energy, x.grid, x.energy * x.savedPrice, x.grid * x.savedPrice) + readingsHtml(x) + '</article>';
+             valsHtml(x.energy, x.grid, x.energy * x.savedPrice, gridCost(x)) + readingsHtml(x) + '</article>';
     }).join('') : '<p class="empty">Bez dat</p>';
   }
 
@@ -564,7 +594,7 @@ details[open] summary { margin-bottom: 10px; }
     var v = V(), m = {};
     v.forEach(function (x) {
       var o = m[x.year] || (m[x.year] = { e: 0, g: 0, s: 0, c: 0, months: 0 });
-      o.e += x.energy; o.g += x.grid; o.s += x.energy * x.savedPrice; o.c += x.grid * x.savedPrice; o.months++;
+      o.e += x.energy; o.g += x.grid; o.s += x.energy * x.savedPrice; o.c += gridCost(x); o.months++;
     });
     var ys = yearsOf(v);
     function changeText(current, previous, label, unit) {
@@ -606,8 +636,8 @@ details[open] summary { margin-bottom: 10px; }
       if (!rec) return '<div class="compare-cell"><h3>' + title + '</h3><p>Pro tento měsíc není uložený záznam.</p></div>';
       return '<div class="compare-cell"><h3>' + title + '</h3>' +
         metric('Výroba FVE', rec.energy, null, 'kWh') + metric('Dokup ze sítě', rec.grid, null, 'kWh') +
-        metric('Odhad úspory', rec.energy * rec.savedPrice, null, 'Kč') +
-        '<p>Cena: <strong>' + f1(rec.savedPrice) + ' Kč/kWh</strong></p></div>';
+        metric('Odhad úspory', rec.energy * rec.savedPrice, null, 'Kč') + metric('Náklady na síť', gridCost(rec), null, 'Kč') +
+        '<p>Cena FVE: <strong>' + f1(rec.savedPrice) + ' Kč/kWh</strong></p>' + (rec.priceVT !== undefined && rec.priceNT !== undefined ? '<p>Cena VT/NT: <strong>' + f1(rec.priceVT) + ' / ' + f1(rec.priceNT) + ' Kč/kWh</strong></p>' : '') + '</div>';
     }
     var result = '';
     if (current && previous) {
@@ -619,6 +649,7 @@ details[open] summary { margin-bottom: 10px; }
       result = '<div class="compare-result"><b>Změna ' + year + ' oproti ' + (year-1) + ':</b><br>' +
         'Výroba FVE: <b>' + delta(current.energy, previous.energy, 'kWh') + '</b><br>' +
         'Dokup ze sítě: <b>' + delta(current.grid, previous.grid, 'kWh') + '</b><br>' +
+        'Náklady na síť: <b>' + delta(gridCost(current), gridCost(previous), 'Kč') + '</b><br>' +
         'Odhad úspory: <b>' + delta(current.energy*current.savedPrice, previous.energy*previous.savedPrice, 'Kč') + '</b></div>';
     } else {
       result = '<p class="hint">Pro výpočet rozdílu je potřeba mít uložený záznam za ' + MN[month-1] + ' ' + year + ' i ' + (year-1) + '.</p>';
@@ -658,30 +689,38 @@ details[open] summary { margin-bottom: 10px; }
   }
   function updateCalc() {
     var y = Number(iY.value), mo = Number(iM.value);
-    var eRec = prevEnd(y, mo, 'eEnd'), gRec = prevEnd(y, mo, 'gEnd');
+    var eRec = prevEnd(y, mo, 'eEnd'), vtRec = prevEnd(y, mo, 'vtEnd'), ntRec = prevEnd(y, mo, 'ntEnd');
     iEs.min = eRec ? String(eRec.eEnd) : '0';
-    iGs.min = gRec ? String(gRec.gEnd) : '0';
-    showCalc('calcE', diff(iEs.value, iEe.value), iEs.value, eRec ? eRec.eEnd : null);
-    showCalc('calcG', diff(iGs.value, iGe.value), iGs.value, gRec ? gRec.gEnd : null);
+    iVts.min = vtRec ? String(vtRec.vtEnd) : '0';
+    iNts.min = ntRec ? String(ntRec.ntEnd) : '0';
+    var en = diff(iEs.value, iEe.value), vt = diff(iVts.value, iVte.value), nt = diff(iNts.value, iNte.value);
+    showCalc('calcE', en, iEs.value, eRec ? eRec.eEnd : null);
+    showCalc('calcVT', vt, iVts.value, vtRec ? vtRec.vtEnd : null);
+    showCalc('calcNT', nt, iNts.value, ntRec ? ntRec.ntEnd : null);
+    var pv = parseFloat(priceVTEl.value), pn = parseFloat(priceNTEl.value);
+    if (vt !== null && nt !== null && vt >= 0 && nt >= 0 && isFinite(pv) && pv >= 0 && isFinite(pn) && pn >= 0) {
+      $('calcCost').textContent = f1(vt*pv + nt*pn) + ' Kč';
+    } else $('calcCost').textContent = 'zadej oba odečty a ceny VT/NT';
   }
   function fillFromExisting() {
     var y = Number(iY.value), mo = Number(iM.value), hint = $('fHint'), ex = null;
     d.forEach(function (x) { if (x.year === y && x.month === mo) ex = x; });
-    [iEs, iEe, iGs, iGe].forEach(function (el) { el.value = ''; });
-    if (ex && ['eStart', 'eEnd', 'gStart', 'gEnd'].some(function (k) { return ex[k] !== undefined; })) {
-      setVal(iEs, ex.eStart); setVal(iEe, ex.eEnd); setVal(iGs, ex.gStart); setVal(iGe, ex.gEnd);
-      hint.textContent = MN[mo - 1] + ' ' + y + ' už je zapsaný. Uložením ho přepíšete.';
+    [iEs, iEe, iVts, iVte, iNts, iNte].forEach(function (el) { el.value = ''; });
+    if (ex) {
+      setVal(iEs, ex.eStart); setVal(iEe, ex.eEnd);
+      setVal(iVts, ex.vtStart); setVal(iVte, ex.vtEnd); setVal(iNts, ex.ntStart); setVal(iNte, ex.ntEnd);
+      if (ex.priceVT !== undefined) priceVT = ex.priceVT;
+      if (ex.priceNT !== undefined) priceNT = ex.priceNT;
+      hint.textContent = MN[mo - 1] + ' ' + y + ' už je zapsaný. Uložením ho přepíšete. Starší záznamy bez VT/NT zůstanou v historii zachované.';
     } else {
-      // Antik Smart Home resetuje počitadla na začátku roku; uvnitř roku se navazuje na poslední záznam.
-      var eRec = prevEnd(y, mo, 'eEnd'), gRec = prevEnd(y, mo, 'gEnd');
+      var eRec = prevEnd(y, mo, 'eEnd'), vtRec = prevEnd(y, mo, 'vtEnd'), ntRec = prevEnd(y, mo, 'ntEnd');
       setVal(iEs, eRec ? eRec.eEnd : 0);
-      setVal(iGs, gRec ? gRec.gEnd : 0);
-      var src = mo === 1
-        ? 'Nový rok začíná od 0, proto jsou počáteční stavy nastavené na 0. '
-        : 'Počáteční stavy navazují na poslední záznam v tomto roce; zkontrolujte je, pokud některý měsíc chybí. ';
-      if (ex) hint.textContent = MN[mo - 1] + ' ' + y + ' je zapsaný jen jako souhrn (' + f1(ex.energy) + ' kWh slunce, ' + f1(ex.grid) + ' kWh síť). Zadáním stavů ho přepíšete. ' + src;
-      else hint.textContent = src + HINT;
+      setVal(iVts, vtRec ? vtRec.vtEnd : 0);
+      setVal(iNts, ntRec ? ntRec.ntEnd : 0);
+      hint.textContent = (mo === 1 ? 'Nový rok: ověř, zda elektroměry začínají od nuly. ' : 'Počáteční stavy navazují na poslední zaznamenaný stav v tomto roce; zkontroluj je, pokud některý měsíc chybí. ') + HINT;
     }
+    priceVTEl.value = priceVT === null ? '' : String(priceVT);
+    priceNTEl.value = priceNT === null ? '' : String(priceNT);
     updateCalc();
   }
   // Najde poslední zaznamenaný konečný stav před vybraným měsícem v témže roce.
@@ -710,29 +749,33 @@ details[open] summary { margin-bottom: 10px; }
   }
   iY.addEventListener('change', fillFromExisting);
   iM.addEventListener('change', fillFromExisting);
-  [iEs, iEe, iGs, iGe].forEach(function (el) { el.addEventListener('input', updateCalc); });
+  [iEs, iEe, iVts, iVte, iNts, iNte, priceVTEl, priceNTEl].forEach(function (el) { el.addEventListener('input', updateCalc); });
+  priceVTEl.addEventListener('change', function () { var n=parseFloat(priceVTEl.value); if (isFinite(n)&&n>=0) { priceVT=n; store.set('fvePriceVT', String(n)); } else priceVT=null; updateCalc(); });
+  priceNTEl.addEventListener('change', function () { var n=parseFloat(priceNTEl.value); if (isFinite(n)&&n>=0) { priceNT=n; store.set('fvePriceNT', String(n)); } else priceNT=null; updateCalc(); });
 
   $('fveForm').addEventListener('submit', function (ev) {
     ev.preventDefault();
     var y = Number(iY.value), mo = Number(iM.value), idx = -1;
-    var es = parseFloat(iEs.value), ee = parseFloat(iEe.value), gs = parseFloat(iGs.value), ge = parseFloat(iGe.value);
-    if (![es, ee, gs, ge].every(function (n) { return isFinite(n) && n >= 0; })) { say('fStatus', 'Vyplňte všechny čtyři stavy jako čísla od nuly výš.', true); return; }
-    if (ee < es || ge < gs) { say('fStatus', 'Konečný stav nesmí být nižší než počáteční.', true); return; }
-    var prevE = prevEnd(y, mo, 'eEnd'), prevG = prevEnd(y, mo, 'gEnd');
-    if ((prevE && es < Number(prevE.eEnd) - 1e-9) || (prevG && gs < Number(prevG.gEnd) - 1e-9)) {
-      say('fStatus', 'Počáteční stav během roku nesmí být nižší než poslední zaznamenaný konečný stav. Pro leden se počítadla resetují na 0.', true); return;
+    var es = parseFloat(iEs.value), ee = parseFloat(iEe.value), vts = parseFloat(iVts.value), vte = parseFloat(iVte.value), nts = parseFloat(iNts.value), nte = parseFloat(iNte.value), pv = parseFloat(priceVTEl.value), pn = parseFloat(priceNTEl.value);
+    if (![es, ee, vts, vte, nts, nte].every(function (n) { return isFinite(n) && n >= 0; })) { say('fStatus', 'Vyplň všechny odečty FVE, VT a NT jako čísla od nuly výš.', true); return; }
+    if (![pv, pn].every(function (n) { return isFinite(n) && n >= 0; })) { say('fStatus', 'Zadej platnou cenu za kWh pro VT i NT.', true); return; }
+    if (ee < es || vte < vts || nte < nts) { say('fStatus', 'Konečný stav nesmí být nižší než počáteční.', true); return; }
+    var prevE = prevEnd(y, mo, 'eEnd'), prevVT = prevEnd(y, mo, 'vtEnd'), prevNT = prevEnd(y, mo, 'ntEnd');
+    if ((prevE && es < Number(prevE.eEnd) - 1e-9) || (prevVT && vts < Number(prevVT.vtEnd) - 1e-9) || (prevNT && nts < Number(prevNT.ntEnd) - 1e-9)) {
+      say('fStatus', 'Počáteční stav během roku nesmí být nižší než poslední zaznamenaný konečný stav. Ověř také reset elektroměru na začátku roku.', true); return;
     }
 
-    var en = Math.round((ee - es) * 1000) / 1000, gr = Math.round((ge - gs) * 1000) / 1000;
+    priceVT = pv; priceNT = pn; store.set('fvePriceVT', String(pv)); store.set('fvePriceNT', String(pn));
+    var en = Math.round((ee - es) * 1000) / 1000, vt = Math.round((vte - vts) * 1000) / 1000, nt = Math.round((nte - nts) * 1000) / 1000, gr = Math.round((vt + nt) * 1000) / 1000;
     d.forEach(function (x, i) { if (x.year === y && x.month === mo) idx = i; });
-    var rec = { year: y, month: mo, energy: en, grid: gr, savedPrice: prc, eStart: es, eEnd: ee, gStart: gs, gEnd: ge, updatedAt: Math.max(Date.now(), (+deletions[y + '-' + mo] || 0) + 1) };
+    var rec = { year: y, month: mo, energy: en, grid: gr, savedPrice: prc, eStart: es, eEnd: ee, vtStart: vts, vtEnd: vte, ntStart: nts, ntEnd: nte, priceVT: pv, priceNT: pn, updatedAt: Math.max(Date.now(), (+deletions[y + '-' + mo] || 0) + 1) };
     delete deletions[y + '-' + mo];
     if (idx >= 0) { rec.id = d[idx].id; d[idx] = rec; } else { rec.id = Date.now(); d.push(rec); }
     save(); fy = y; buildEntryYears();
     var nxY = mo === 12 ? y + 1 : y, nxM = mo === 12 ? 1 : mo + 1;
     iY.value = String(nxY); iM.value = String(nxM);
     render(); fillFromExisting();
-    say('fStatus', 'Uloženo: ' + MN[mo - 1] + ' ' + y + ', slunce ' + f1(en) + ' kWh, síť ' + f1(gr) + ' kWh. Formulář je připravený na ' + MN[nxM - 1] + ' ' + nxY + '.' + (storageOk ? '' : ' Pozor, data se uloží jen do zavření stránky.'));
+    say('fStatus', 'Uloženo: ' + MN[mo - 1] + ' ' + y + ', slunce ' + f1(en) + ' kWh, VT ' + f1(vt) + ' kWh, NT ' + f1(nt) + ' kWh, náklady ' + f1(vt*pv + nt*pn) + ' Kč. Formulář je připravený na ' + MN[nxM - 1] + ' ' + nxY + '.' + (storageOk ? '' : ' Pozor, data se uloží jen do zavření stránky.'));
   });
 
   pI.value = prc.toFixed(1);
@@ -793,9 +836,9 @@ details[open] summary { margin-bottom: 10px; }
   $('exportCsv').addEventListener('click', function () {
     if (!d.length) { say('bStatus', 'Zatím není co exportovat. Nejdřív uložte aspoň jeden měsíc.', true); return; }
     function csvCell(value) { var s = String(value == null ? '' : value); return '"' + s.replace(/"/g, '""') + '"'; }
-    var rows = [['Rok','Měsíc','Výroba FVE (kWh)','Dokup ze sítě (kWh)','Cena (Kč/kWh)','Odhad úspory (Kč)','Náklady na dokup (Kč)','Počáteční FVE stav','Konečný FVE stav','Počáteční stav sítě','Konečný stav sítě']];
+    var rows = [['Rok','Měsíc','Výroba FVE (kWh)','Dokup ze sítě (kWh)','Cena FVE (Kč/kWh)','Odhad úspory (Kč)','Náklady na dokup (Kč)','Počáteční FVE stav','Konečný FVE stav','Počáteční stav sítě','Konečný stav sítě','Počáteční VT','Konečný VT','Spotřeba VT (kWh)','Cena VT (Kč/kWh)','Počáteční NT','Konečný NT','Spotřeba NT (kWh)','Cena NT (Kč/kWh)']];
     d.slice().sort(function (a,b) { return a.year-b.year || a.month-b.month; }).forEach(function (x) {
-      rows.push([x.year, MN[x.month-1], x.energy, x.grid, x.savedPrice, x.energy*x.savedPrice, x.grid*x.savedPrice, x.eStart === undefined ? '' : x.eStart, x.eEnd === undefined ? '' : x.eEnd, x.gStart === undefined ? '' : x.gStart, x.gEnd === undefined ? '' : x.gEnd]);
+      rows.push([x.year, MN[x.month-1], x.energy, x.grid, x.savedPrice, x.energy*x.savedPrice, gridCost(x), x.eStart === undefined ? '' : x.eStart, x.eEnd === undefined ? '' : x.eEnd, x.gStart === undefined ? '' : x.gStart, x.gEnd === undefined ? '' : x.gEnd, x.vtStart === undefined ? '' : x.vtStart, x.vtEnd === undefined ? '' : x.vtEnd, x.vtStart === undefined ? '' : x.vtEnd-x.vtStart, x.priceVT === undefined ? '' : x.priceVT, x.ntStart === undefined ? '' : x.ntStart, x.ntEnd === undefined ? '' : x.ntEnd, x.ntStart === undefined ? '' : x.ntEnd-x.ntStart, x.priceNT === undefined ? '' : x.priceNT]);
     });
     var csv = '\uFEFF' + rows.map(function (row) { return row.map(csvCell).join(';'); }).join('\r\n');
     downloadFile('fve-tracker-export-' + new Date().toISOString().slice(0,10) + '.csv', csv, 'text/csv;charset=utf-8');
