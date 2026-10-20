@@ -531,6 +531,7 @@ details[open] summary { margin-bottom: 10px; }
       if (eRec) setVal(iEs, eRec.eEnd);
       if (gRec) setVal(iGs, gRec.gEnd);
       var src = '';
+      if (mo === 1) { setVal(iEs, 0); setVal(iGs, 0); src = 'Nový rok začíná od nuly, počáteční stavy jsou nastavené na 0. '; }
       if (eRec || gRec) {
         src = (eRec && gRec && eRec.id === gRec.id) ? 'z konce měsíce ' + MN[eRec.month - 1] + ' ' + eRec.year : 'z posledních zapsaných stavů';
         src = 'Počáteční stavy jsou převzaté ' + src + '. ';
@@ -544,7 +545,7 @@ details[open] summary { margin-bottom: 10px; }
     var best = null, cur = y * 100 + mo;
     d.forEach(function (x) {
       var k = x.year * 100 + x.month;
-      if (x[key] === undefined || k >= cur) return;
+      if (x[key] === undefined || x.year !== y || k >= cur) return;
       if (!best || k > best.year * 100 + best.month) best = x;
     });
     return best;
