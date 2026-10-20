@@ -381,12 +381,14 @@ details[open] summary { margin-bottom: 10px; }
 
   var d = [];
   try { d = clean(JSON.parse(store.get('fveD') || '[]')); } catch (e) { d = []; }
+  var deletions = {};
+  try { deletions = cleanDeletions(JSON.parse(store.get('fveDeleted') || '{}')); } catch (e) { deletions = {}; }
   var p0 = parseFloat(store.get('fveP'));
   var prc = isFinite(p0) && p0 >= 0 ? p0 : 5;
 
   var syncing = false, syncTimer = null;
   function save() {
-    store.set('fveD', JSON.stringify(d)); store.set('fveP', String(prc));
+    store.set('fveD', JSON.stringify(d)); store.set('fveP', String(prc)); store.set('fveDeleted', JSON.stringify(deletions));
     if (!syncing) scheduleSync();
   }
 
@@ -405,10 +407,9 @@ details[open] summary { margin-bottom: 10px; }
   var iY = $('inpY'), iM = $('inpM'), iEs = $('inpEs'), iEe = $('inpEe'), iGs = $('inpGs'), iGe = $('inpGe'), pI = $('kwPrice');
 
   function buildEntryYears() {
-    // Populate years defensively: keep a usable list on mobile Safari and retain historical data years.
-    var min = cY - 10, max = cY + 2;
-    d.forEach(function (x) { if (x.year < min) min = x.year; if (x.year + 1 > max) max = x.year + 1; });
-    min = Math.max(1990, min); max = Math.min(2100, max);
+    // Entry form starts at 2026; older records remain available in history.
+    var min = 2026, max = Math.min(2100, Math.max(cY + 10, 2036));
+    d.forEach(function (x) { if (x.year >= 2026 && x.year + 1 > max) max = Math.min(2100, x.year + 1); });
     var keep = String(iY.value || cY), html = '';
     for (var y = max; y >= min; y--) html += '<option value="' + y + '">' + y + '</option>';
     iY.innerHTML = html;
@@ -416,7 +417,7 @@ details[open] summary { margin-bottom: 10px; }
     if (iY.value !== keep) iY.value = String(cY);
     // Last-resort fallback if a browser fails to populate the generated options.
     if (!iY.options.length) {
-      for (var fy0 = cY + 1; fy0 >= cY - 5; fy0--) iY.add(new Option(String(fy0), String(fy0)));
+      for (var fy0 = Math.max(cY + 10, 2036); fy0 >= 2026; fy0--) iY.add(new Option(String(fy0), String(fy0)));
       iY.value = String(cY);
     }
   }
@@ -616,7 +617,8 @@ details[open] summary { margin-bottom: 10px; }
 
     var en = Math.round((ee - es) * 1000) / 1000, gr = Math.round((ge - gs) * 1000) / 1000;
     d.forEach(function (x, i) { if (x.year === y && x.month === mo) idx = i; });
-    var rec = { year: y, month: mo, energy: en, grid: gr, savedPrice: prc, eStart: es, eEnd: ee, gStart: gs, gEnd: ge, updatedAt: Date.now() };
+    var rec = { year: y, month: mo, energy: en, grid: gr, savedPrice: prc, eStart: es, eEnd: ee, gStart: gs, gEnd: ge, updatedAt: Math.max(Date.now(), (+deletions[y + '-' + mo] || 0) + 1) };
+    delete deletions[y + '-' + mo];
     if (idx >= 0) { rec.id = d[idx].id; d[idx] = rec; } else { rec.id = Date.now(); d.push(rec); }
     save(); fy = y; buildEntryYears();
     var nxY = mo === 12 ? y + 1 : y, nxM = mo === 12 ? 1 : mo + 1;
@@ -653,6 +655,8 @@ details[open] summary { margin-bottom: 10px; }
     else if (t.hasAttribute('data-no')) { pendDel = null; renderList(); }
     else if (t.hasAttribute('data-yes')) {
       var id = Number(t.getAttribute('data-yes'));
+      var removed = d.filter(function (x) { return x.id === id; })[0];
+      if (removed) deletions[removed.year + '-' + removed.month] = Math.max(Date.now(), (+removed.updatedAt || 0) + 1);
       d = d.filter(function (x) { return x.id !== id; });
       pendDel = null; save(); buildEntryYears(); fillFromExisting(); render();
     }
@@ -710,6 +714,11 @@ details[open] summary { margin-bottom: 10px; }
       return;
     }
     d = res.list;
+    d.forEach(function (x) {
+      var key = x.year + '-' + x.month;
+      x.updatedAt = Math.max(+x.updatedAt || 0, Date.now(), (+deletions[key] || 0) + 1);
+      delete deletions[key];
+    });
     if (isFinite(res.cena) && res.cena >= 0) { prc = res.cena; pI.value = prc.toFixed(1); }
     pendDel = null; fy = null; save(); buildEntryYears(); selectNextMonth(); render(); resetImport();
     say('bStatus', 'Načteno ' + d.length + ' záznamů.');
@@ -750,13 +759,29 @@ details[open] summary { margin-bottom: 10px; }
     return true;
   }
   function cloudStatus() { if (authState) say('syncStatus', 'Přihlášeno. Synchronizace je zapnutá.'); }
-  function mergeRecords(local, remote) {
+  function cleanDeletions(value) {
+    var out = {};
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return out;
+    Object.keys(value).forEach(function (key) {
+      var m = /^(\d{4})-(\d{1,2})$/.exec(key), stamp = Number(value[key]);
+      if (m && Number(m[1]) >= 1990 && Number(m[1]) <= 2100 && Number(m[2]) >= 1 && Number(m[2]) <= 12 && isFinite(stamp) && stamp > 0) out[Number(m[1]) + '-' + Number(m[2])] = stamp;
+    });
+    return out;
+  }
+  function mergeDeletions(local, remote) {
+    var out = cleanDeletions(local), other = cleanDeletions(remote);
+    Object.keys(other).forEach(function (key) { out[key] = Math.max(+out[key] || 0, +other[key] || 0); });
+    var ordered = {};
+    Object.keys(out).sort().forEach(function (key) { ordered[key] = out[key]; });
+    return ordered;
+  }
+  function mergeRecords(local, remote, deleted) {
     var map = {};
     local.concat(remote).forEach(function (x) {
       var k = x.year + '-' + x.month, old = map[k];
       if (!old || (+x.updatedAt || 0) >= (+old.updatedAt || 0)) map[k] = x;
     });
-    return Object.keys(map).map(function (k) { return map[k]; }).sort(function (a,b) { return a.year-b.year || a.month-b.month; });
+    return Object.keys(map).filter(function (k) { return !(deleted && +deleted[k] >= (+map[k].updatedAt || 0)); }).map(function (k) { return map[k]; }).sort(function (a,b) { return a.year-b.year || a.month-b.month; });
   }
   async function doSync(manual) {
     var cfg = syncConfig();
@@ -777,7 +802,9 @@ details[open] summary { margin-bottom: 10px; }
         var cloud = await response.json();
         if (cloud !== null && (!cloud || typeof cloud !== 'object' || !Array.isArray(cloud.data))) throw new Error('Cloud obsahuje neočekávaný formát. Data nebyla přepsána.');
         var remote = cloud ? clean(cloud.data) : [];
-        var merged = mergeRecords(d, remote);
+        var remoteDeletions = cloud ? cleanDeletions(cloud.deleted) : {};
+        var mergedDeletions = mergeDeletions(deletions, remoteDeletions);
+        var merged = mergeRecords(d, remote, mergedDeletions);
         var remotePriceTime = cloud ? (+cloud.priceUpdatedAt || 0) : 0;
         var localPriceTime = +store.get('fvePriceUpdatedAt') || 0;
         var mergedPrice = prc, mergedPriceTime = localPriceTime;
@@ -785,16 +812,17 @@ details[open] summary { margin-bottom: 10px; }
           var cp = parseFloat(cloud.cena);
           if (isFinite(cp) && cp >= 0) { mergedPrice = cp; mergedPriceTime = remotePriceTime; }
         }
-        var payload = { data: merged, cena: mergedPrice, priceUpdatedAt: Math.max(remotePriceTime, mergedPriceTime), updatedAt: Date.now() };
-        var shouldWrite = cloud === null || JSON.stringify(remote) !== JSON.stringify(merged) || +cloud.priceUpdatedAt !== payload.priceUpdatedAt || parseFloat(cloud.cena) !== mergedPrice;
+        var payload = { data: merged, deleted: mergedDeletions, cena: mergedPrice, priceUpdatedAt: Math.max(remotePriceTime, mergedPriceTime), updatedAt: Date.now() };
+        var shouldWrite = cloud === null || JSON.stringify(remote) !== JSON.stringify(merged) || JSON.stringify(remoteDeletions) !== JSON.stringify(mergedDeletions) || +cloud.priceUpdatedAt !== payload.priceUpdatedAt || parseFloat(cloud.cena) !== mergedPrice;
         if (shouldWrite) {
           var put = await fetch(path + '?auth=' + encodeURIComponent(authState.idToken), { method: 'PUT', headers: { 'Content-Type': 'application/json', 'If-Match': etag }, body: JSON.stringify(payload) });
           if (put.status === 412) continue;
           if (put.status === 401 || put.status === 403) throw new Error('Zápis zamítnut. Zkontrolujte přihlášení a pravidla Firebase.');
           if (!put.ok) throw new Error('Cloud nelze aktualizovat (HTTP ' + put.status + '). Místní data zůstala zachována.');
         }
-        d = mergeRecords(d, merged); prc = mergedPrice;
-        store.set('fveD', JSON.stringify(d)); store.set('fveP', String(prc));
+        deletions = mergedDeletions;
+        d = mergeRecords(d, merged, deletions); prc = mergedPrice;
+        store.set('fveD', JSON.stringify(d)); store.set('fveP', String(prc)); store.set('fveDeleted', JSON.stringify(deletions));
         if (mergedPriceTime) store.set('fvePriceUpdatedAt', String(mergedPriceTime));
         pI.value = prc.toFixed(1); buildEntryYears(); render(); fillFromExisting(); completed = true;
         if (manual) say('syncStatus', cloud === null ? 'Cloud byl inicializován. Místní data jsou připravena k synchronizaci mezi zařízeními.' : 'Synchronizováno. V zařízení i cloudu je ' + d.length + ' záznamů.');
