@@ -9,7 +9,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="FVE">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon-192.png">
 <style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
 <title>FVE Tracker</title>
@@ -165,7 +165,18 @@ form .btn { width: 100%; margin-top: 4px; }
 .fill.g { background: var(--grid); }
 .cv { font-size: 12px; font-weight: 700; text-align: right; white-space: nowrap; }
 
-/* Tabs and records */
+/* Month-to-month comparison */
+  .compare-controls { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+  .compare-controls label { display:grid; gap:4px; font-size:13px; font-weight:700; }
+  .compare-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .compare-cell { border:1px solid var(--line); background:var(--sunk); border-radius:10px; padding:12px; min-width:0; }
+  .compare-cell h3 { margin:0 0 8px; font:700 14px var(--f-body); }
+  .compare-cell p { margin:4px 0; font-size:13px; color:var(--muted); }
+  .compare-cell strong { color:var(--fg); }
+  .compare-result { margin:12px 0 0; padding:10px 12px; border-radius:10px; background:var(--sunk); font-size:14px; }
+  @media (max-width:420px) { .compare-grid { grid-template-columns:1fr; } }
+
+  /* Tabs and records */
 .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; background: var(--sunk); border-radius: 10px; padding: 3px; margin-bottom: 14px; }
 .tab { border: 0; background: none; border-radius: 8px; padding: 10px; font-weight: 700; color: var(--muted); cursor: pointer; min-height: 40px; }
 .tab[aria-selected="true"] { background: var(--surface); color: var(--sun-ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12); }
@@ -220,7 +231,7 @@ details[open] summary { margin-bottom: 10px; }
       <p class="sub">Ohřev vody: výroba ze slunce a dokup ze sítě</p>
     </div>
     <label class="price" for="kwPrice">Cena Kč/kWh
-      <input type="number" id="kwPrice" step="0.1" min="0" inputmode="decimal" value="5.0">
+      <input type="number" id="kwPrice" step="0.1" min="0" inputmode="decimal" value="4.5">
     </label>
   </header>
 
@@ -230,6 +241,12 @@ details[open] summary { margin-bottom: 10px; }
     <div class="stat"><span class="k">Vyrobeno (slunce)</span><span class="v c-sun" id="sTot">0,0 kWh</span><span class="m c-save" id="sTotK">Úspora: 0,0 Kč</span></div>
     <div class="stat"><span class="k">Dokoupeno (síť)</span><span class="v c-grid" id="sGrid">0,0 kWh</span><span class="m c-cost" id="sGridK">Náklady: 0,0 Kč</span></div>
     <div class="stat"><span class="k">Celková spotřeba</span><span class="v" id="sCon">0,0 kWh</span><span class="m c-sun" id="sShare">Podíl FVE: 0 %</span></div>
+  </section>
+
+  <section class="stats" aria-label="Přehled aktuálního roku" id="yearDashboard">
+    <div class="stat"><span class="k">Výroba v aktuálním roce</span><span class="v c-sun" id="sYearEnergy">0,0 kWh</span><span class="m" id="sYearMonths">Záznamy: 0 měsíců</span></div>
+    <div class="stat"><span class="k">Odhad úspory v aktuálním roce</span><span class="v c-save" id="sYearSavings">0,0 Kč</span><span class="m">Výroba × uložená cena</span></div>
+    <div class="stat"><span class="k">Meziroční změna výroby</span><span class="v" id="sYearChange">—</span><span class="m" id="sYearChangeNote">Pro porovnání jsou potřeba data za dva roky</span></div>
   </section>
 
   <div class="main">
@@ -275,6 +292,17 @@ details[open] summary { margin-bottom: 10px; }
         </div>
         <div class="legend"><span><i style="background:var(--sun)"></i>Slunce (kWh)</span><span><i style="background:var(--grid)"></i>Síť (kWh)</span></div>
         <div id="chart"></div>
+      </section>
+
+      <section class="card" aria-labelledby="compareTitle">
+        <h2 id="compareTitle">Porovnání stejného měsíce mezi roky</h2>
+        <div class="compare-controls">
+          <label for="compareYear">Vybraný rok<select id="compareYear"></select></label>
+          <label for="compareMonth">Měsíc<select id="compareMonth">
+            <option value="1">Leden</option><option value="2">Únor</option><option value="3">Březen</option><option value="4">Duben</option><option value="5">Květen</option><option value="6">Červen</option><option value="7">Červenec</option><option value="8">Srpen</option><option value="9">Září</option><option value="10">Říjen</option><option value="11">Listopad</option><option value="12">Prosinec</option>
+          </select></label>
+        </div>
+        <div id="monthCompare"></div>
       </section>
 
       <section class="card">
@@ -326,6 +354,8 @@ details[open] summary { margin-bottom: 10px; }
         </div>
         <div class="acts">
           <button type="button" class="btn" id="copyBackup">Zkopírovat zálohu</button>
+          <button type="button" class="btn ghost" id="downloadJson">Stáhnout JSON zálohu</button>
+          <button type="button" class="btn ghost" id="exportCsv">Exportovat CSV</button>
           <button type="button" class="btn ghost" id="doImport">Načíst data</button>
         </div>
         <div class="field">
@@ -367,7 +397,7 @@ details[open] summary { margin-bottom: 10px; }
         id: isFinite(+x.id) ? +x.id : Date.now() + i,
         year: year, month: month, energy: energy,
         grid: isFinite(g) && g >= 0 ? g : 0,
-        savedPrice: isFinite(sp) && sp >= 0 ? sp : 5,
+        savedPrice: isFinite(sp) && sp >= 0 ? sp : 4.5,
         updatedAt: isFinite(+x.updatedAt) && +x.updatedAt >= 0 ? +x.updatedAt : 0
       };
       ['eStart', 'eEnd', 'gStart', 'gEnd'].forEach(function (k) {
@@ -384,7 +414,7 @@ details[open] summary { margin-bottom: 10px; }
   var deletions = {};
   try { deletions = cleanDeletions(JSON.parse(store.get('fveDeleted') || '{}')); } catch (e) { deletions = {}; }
   var p0 = parseFloat(store.get('fveP'));
-  var prc = isFinite(p0) && p0 >= 0 ? p0 : 5;
+  var prc = isFinite(p0) && p0 >= 0 ? p0 : 4.5;
 
   var syncing = false, syncTimer = null;
   function save() {
@@ -396,7 +426,7 @@ details[open] summary { margin-bottom: 10px; }
   var SAMPLE_G = [150, 120, 80, 40, 20, 10, 8, 12, 45, 90, 130, 160];
   function sample() {
     var out = [];
-    for (var m = 1; m <= cM; m++) out.push({ id: -m, year: cY, month: m, energy: SAMPLE_E[m - 1], grid: SAMPLE_G[m - 1], savedPrice: 5 });
+    for (var m = 1; m <= cM; m++) out.push({ id: -m, year: cY, month: m, energy: SAMPLE_E[m - 1], grid: SAMPLE_G[m - 1], savedPrice: 4.5 });
     return out;
   }
   function V() { return d; }
@@ -447,6 +477,28 @@ details[open] summary { margin-bottom: 10px; }
     var set = {};
     v.forEach(function (x) { set[x.year] = 1; });
     return Object.keys(set).map(Number).sort(function (a, b) { return b - a; });
+  }
+
+  function renderYearDashboard() {
+    var v = V(), thisYear = cY, prevYear = cY - 1;
+    var current = v.filter(function (x) { return x.year === thisYear; });
+    var previous = v.filter(function (x) { return x.year === prevYear; });
+    var energy = 0, savings = 0, prevEnergy = 0;
+    current.forEach(function (x) { energy += x.energy; savings += x.energy * x.savedPrice; });
+    previous.forEach(function (x) { prevEnergy += x.energy; });
+    $('sYearEnergy').textContent = f1(energy) + ' kWh';
+    $('sYearSavings').textContent = f1(savings) + ' Kč';
+    $('sYearMonths').textContent = 'Záznamy: ' + current.length + ' měsíců';
+    if (current.length && previous.length && prevEnergy > 0) {
+      var change = ((energy - prevEnergy) / prevEnergy) * 100;
+      $('sYearChange').textContent = (change > 0 ? '+' : '') + f1(change) + ' %';
+      $('sYearChange').className = 'v ' + (change >= 0 ? 'c-save' : 'c-cost');
+      $('sYearChangeNote').textContent = 'Proti roku ' + prevYear + ' (' + f1(prevEnergy) + ' kWh)';
+    } else {
+      $('sYearChange').textContent = '—';
+      $('sYearChange').className = 'v';
+      $('sYearChangeNote').textContent = 'Pro porovnání jsou potřeba záznamy za ' + thisYear + ' a ' + prevYear;
+    }
   }
 
   function renderChart() {
@@ -511,19 +563,75 @@ details[open] summary { margin-bottom: 10px; }
   function renderYears() {
     var v = V(), m = {};
     v.forEach(function (x) {
-      var o = m[x.year] || (m[x.year] = { e: 0, g: 0, s: 0, c: 0 });
-      o.e += x.energy; o.g += x.grid; o.s += x.energy * x.savedPrice; o.c += x.grid * x.savedPrice;
+      var o = m[x.year] || (m[x.year] = { e: 0, g: 0, s: 0, c: 0, months: 0 });
+      o.e += x.energy; o.g += x.grid; o.s += x.energy * x.savedPrice; o.c += x.grid * x.savedPrice; o.months++;
     });
     var ys = yearsOf(v);
+    function changeText(current, previous, label, unit) {
+      if (!previous || previous === 0) return '<p class="rd2">' + label + ': pro srovnání chybí data za předchozí rok</p>';
+      var pct = ((current - previous) / previous) * 100;
+      return '<p class="rd2">' + label + ': ' + (pct > 0 ? '+' : '') + f1(pct) + ' % proti předchozímu roku (' + f1(previous) + ' ' + unit + ')</p>';
+    }
     $('listY').innerHTML = ys.length ? ys.map(function (y) {
-      var o = m[y], con = o.e + o.g, pct = con > 0 ? Math.round((o.e / con) * 100) : 0;
-      return '<article class="rec"><div class="rh"><h3>' + y + '</h3><span class="tag">Podíl FVE ' + pct + ' %</span></div><div></div>' +
-             valsHtml(o.e, o.g, o.s, o.c) + '</article>';
+      var o = m[y], prev = m[y - 1], con = o.e + o.g, pct = con > 0 ? Math.round((o.e / con) * 100) : 0;
+      var comparison = prev
+        ? changeText(o.e, prev.e, 'Výroba FVE', 'kWh') + changeText(o.s, prev.s, 'Odhad úspory', 'Kč')
+        : '<p class="rd2">Počet záznamů: ' + o.months + ' měsíců. Pro meziroční srovnání jsou potřeba údaje i za ' + (y - 1) + '.</p>';
+      return '<article class="rec"><div class="rh"><h3>' + y + '</h3><span class="tag">Podíl FVE ' + pct + ' % · ' + o.months + ' měs.</span></div><div></div>' +
+             valsHtml(o.e, o.g, o.s, o.c) + comparison + '</article>';
     }).join('') : '<p class="empty">Bez dat</p>';
   }
 
+  function renderMonthCompare() {
+    var yearSelect = $('compareYear'), monthSelect = $('compareMonth');
+    if (!yearSelect || !monthSelect) return;
+    var ys = yearsOf(V());
+    if (ys.indexOf(cY) === -1) ys.unshift(cY);
+    ys.sort(function(a,b){ return b-a; });
+    var chosen = Number(yearSelect.value) || cY;
+    yearSelect.innerHTML = ys.map(function(y){ return '<option value="' + y + '">' + y + '</option>'; }).join('');
+    yearSelect.value = String(ys.indexOf(chosen) >= 0 ? chosen : cY);
+    if (!yearSelect.value) yearSelect.value = String(ys[0] || cY);
+    var year = Number(yearSelect.value), month = Number(monthSelect.value) || cM;
+    var current = null, previous = null;
+    V().forEach(function(x){
+      if (x.year === year && x.month === month) current = x;
+      if (x.year === year - 1 && x.month === month) previous = x;
+    });
+    function metric(label, a, b, unit) {
+      if (a === null || b === null) return '<p>' + label + ': <strong>—</strong></p>';
+      return '<p>' + label + ': <strong>' + f1(a) + ' ' + unit + '</strong></p>';
+    }
+    function cell(rec, title) {
+      if (!rec) return '<div class="compare-cell"><h3>' + title + '</h3><p>Pro tento měsíc není uložený záznam.</p></div>';
+      return '<div class="compare-cell"><h3>' + title + '</h3>' +
+        metric('Výroba FVE', rec.energy, null, 'kWh') + metric('Dokup ze sítě', rec.grid, null, 'kWh') +
+        metric('Odhad úspory', rec.energy * rec.savedPrice, null, 'Kč') +
+        '<p>Cena: <strong>' + f1(rec.savedPrice) + ' Kč/kWh</strong></p></div>';
+    }
+    var result = '';
+    if (current && previous) {
+      function delta(a,b,unit) {
+        if (b === 0) return a === 0 ? '0 %' : 'nelze vypočítat (loni 0)';
+        var pct = (a-b)/b*100;
+        return (pct > 0 ? '+' : '') + f1(pct) + ' % (' + (a-b > 0 ? '+' : '') + f1(a-b) + ' ' + unit + ')';
+      }
+      result = '<div class="compare-result"><b>Změna ' + year + ' oproti ' + (year-1) + ':</b><br>' +
+        'Výroba FVE: <b>' + delta(current.energy, previous.energy, 'kWh') + '</b><br>' +
+        'Dokup ze sítě: <b>' + delta(current.grid, previous.grid, 'kWh') + '</b><br>' +
+        'Odhad úspory: <b>' + delta(current.energy*current.savedPrice, previous.energy*previous.savedPrice, 'Kč') + '</b></div>';
+    } else {
+      result = '<p class="hint">Pro výpočet rozdílu je potřeba mít uložený záznam za ' + MN[month-1] + ' ' + year + ' i ' + (year-1) + '.</p>';
+    }
+    $('monthCompare').innerHTML = '<div class="compare-grid">' + cell(current, MN[month-1] + ' ' + year) + cell(previous, MN[month-1] + ' ' + (year-1)) + '</div>' + result;
+  }
+
+  $('compareYear').addEventListener('change', renderMonthCompare);
+  $('compareMonth').value = String(cM);
+  $('compareMonth').addEventListener('change', renderMonthCompare);
+
   function render() {
-    renderNotes(); renderStats(); renderChart(); renderList(); renderYears();
+    renderNotes(); renderStats(); renderYearDashboard(); renderChart(); renderList(); renderYears(); renderMonthCompare();
   }
 
   /* ---------- status helper ---------- */
@@ -667,6 +775,32 @@ details[open] summary { margin-bottom: 10px; }
   var importBtn = $('doImport');
   function resetImport() { pendImp = false; importBtn.textContent = 'Načíst data'; }
   ta.addEventListener('input', resetImport);
+
+  function downloadFile(filename, content, type) {
+    var blob = new Blob([content], { type: type });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename; a.style.display = 'none';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+  $('downloadJson').addEventListener('click', function () {
+    if (!d.length) { say('bStatus', 'Zatím není co zálohovat. Nejdřív uložte aspoň jeden měsíc.', true); return; }
+    var payload = { data: d, cena: prc, exportedAt: new Date().toISOString(), format: 'fve-tracker-backup-v1' };
+    downloadFile('fve-tracker-zaloha-' + new Date().toISOString().slice(0,10) + '.json', JSON.stringify(payload, null, 2), 'application/json;charset=utf-8');
+    say('bStatus', 'JSON záloha připravena ke stažení (' + d.length + ' záznamů).');
+  });
+  $('exportCsv').addEventListener('click', function () {
+    if (!d.length) { say('bStatus', 'Zatím není co exportovat. Nejdřív uložte aspoň jeden měsíc.', true); return; }
+    function csvCell(value) { var s = String(value == null ? '' : value); return '"' + s.replace(/"/g, '""') + '"'; }
+    var rows = [['Rok','Měsíc','Výroba FVE (kWh)','Dokup ze sítě (kWh)','Cena (Kč/kWh)','Odhad úspory (Kč)','Náklady na dokup (Kč)','Počáteční FVE stav','Konečný FVE stav','Počáteční stav sítě','Konečný stav sítě']];
+    d.slice().sort(function (a,b) { return a.year-b.year || a.month-b.month; }).forEach(function (x) {
+      rows.push([x.year, MN[x.month-1], x.energy, x.grid, x.savedPrice, x.energy*x.savedPrice, x.grid*x.savedPrice, x.eStart === undefined ? '' : x.eStart, x.eEnd === undefined ? '' : x.eEnd, x.gStart === undefined ? '' : x.gStart, x.gEnd === undefined ? '' : x.gEnd]);
+    });
+    var csv = '\uFEFF' + rows.map(function (row) { return row.map(csvCell).join(';'); }).join('\r\n');
+    downloadFile('fve-tracker-export-' + new Date().toISOString().slice(0,10) + '.csv', csv, 'text/csv;charset=utf-8');
+    say('bStatus', 'CSV export připraven ke stažení (' + d.length + ' záznamů).');
+  });
 
   $('copyBackup').addEventListener('click', async function () {
     if (!d.length) { say('bStatus', 'Zatím není co zálohovat. Nejdřív uložte aspoň jeden měsíc.', true); return; }
