@@ -733,40 +733,44 @@ details[open] summary { margin-bottom: 10px; }
   }
   async function doSync(manual) {
     var cfg = syncConfig();
-    if (!cfg) { if (manual) say('syncStatus', 'Zadejte platnou HTTPS Firebase URL a synchronizační klíč alespoň 24 znaků bez znaků . # $ [ ] /.', true); return; }
+    if (!cfg) { if (manual) say('syncStatus', 'Zadejte platnou HTTPS Firebase URL a synchronizační klíč alespoň 24 znaků bez znaků . # $ [ ] /. ', true); return; }
     if (syncing) return;
     syncing = true;
+    if (manual) say('syncStatus', 'Probíhá synchronizace…');
     try {
-      var path = cloudPath(cfg);
-      var response = await fetch(path, { cache: 'no-store' });
-      if (!response.ok) throw new Error('Cloud nelze přečíst (HTTP ' + response.status + '). Zkontrolujte URL a pravidla Firebase.');
-      var cloud = await response.json();
-      if (!cloud || !Array.isArray(cloud.data)) {
-        // First device to configure this key seeds the cloud; an empty local dataset is also valid.
-        cloud = { data: d, cena: prc, priceUpdatedAt: Date.now(), updatedAt: Date.now() };
-        var seed = await fetch(path, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cloud) });
-        if (!seed.ok) throw new Error('Cloud nelze inicializovat (HTTP ' + seed.status + '). Zkontrolujte pravidla Firebase.');
-        if (manual) say('syncStatus', 'Cloud byl inicializován. Data jsou připravena k synchronizaci mezi zařízeními.');
-      } else {
-        var remote = clean(cloud.data), merged = mergeRecords(d, remote);
-        var localJson = JSON.stringify(d), mergedJson = JSON.stringify(merged);
-        var remotePriceTime = +cloud.priceUpdatedAt || 0;
-        if (remotePriceTime > (+store.get('fvePriceUpdatedAt') || 0)) {
-          var cp = parseFloat(cloud.cena); if (isFinite(cp) && cp >= 0) prc = cp;
-          store.set('fvePriceUpdatedAt', String(remotePriceTime)); pI.value = prc.toFixed(1);
+      var path = cloudPath(cfg), attempts = 0, completed = false;
+      while (attempts++ < 6 && !completed) {
+        var response = await fetch(path, { cache: 'no-store', headers: { 'X-Firebase-ETag': 'true' } });
+        if (!response.ok) throw new Error('Cloud nelze přečíst (HTTP ' + response.status + '). Zkontrolujte URL a pravidla Firebase.');
+        var etag = response.headers.get('ETag');
+        if (!etag) throw new Error('Firebase neposkytl ETag. Zkontrolujte URL Realtime Database. Data nebyla změněna.');
+        var cloud = await response.json();
+        if (cloud !== null && (!cloud || typeof cloud !== 'object' || !Array.isArray(cloud.data))) throw new Error('Cloud obsahuje neočekávaný formát. Data nebyla přepsána.');
+        var remote = cloud ? clean(cloud.data) : [];
+        var merged = mergeRecords(d, remote);
+        var remotePriceTime = cloud ? (+cloud.priceUpdatedAt || 0) : 0;
+        var localPriceTime = +store.get('fvePriceUpdatedAt') || 0;
+        var mergedPrice = prc, mergedPriceTime = localPriceTime;
+        if (remotePriceTime > localPriceTime) {
+          var cp = parseFloat(cloud.cena);
+          if (isFinite(cp) && cp >= 0) { mergedPrice = cp; mergedPriceTime = remotePriceTime; }
         }
-        d = merged;
-        if (localJson !== mergedJson || JSON.stringify(remote) !== mergedJson) {
-          var payload = { data: d, cena: prc, priceUpdatedAt: Math.max(remotePriceTime, +store.get('fvePriceUpdatedAt') || 0), updatedAt: Date.now() };
-          var put = await fetch(path, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-          if (!put.ok) throw new Error('Cloud nelze aktualizovat (HTTP ' + put.status + ').');
+        var payload = { data: merged, cena: mergedPrice, priceUpdatedAt: Math.max(remotePriceTime, mergedPriceTime), updatedAt: Date.now() };
+        var shouldWrite = cloud === null || JSON.stringify(remote) !== JSON.stringify(merged) || +cloud.priceUpdatedAt !== payload.priceUpdatedAt || parseFloat(cloud.cena) !== mergedPrice;
+        if (shouldWrite) {
+          var put = await fetch(path, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'If-Match': etag }, body: JSON.stringify(payload) });
+          if (put.status === 412) continue;
+          if (!put.ok) throw new Error('Cloud nelze aktualizovat (HTTP ' + put.status + '). Místní data zůstala zachována.');
         }
+        d = mergeRecords(d, merged); prc = mergedPrice;
         store.set('fveD', JSON.stringify(d)); store.set('fveP', String(prc));
-        buildEntryYears(); render(); fillFromExisting();
-        if (manual) say('syncStatus', 'Synchronizováno. V zařízení i cloudu je ' + d.length + ' záznamů.');
+        if (mergedPriceTime) store.set('fvePriceUpdatedAt', String(mergedPriceTime));
+        pI.value = prc.toFixed(1); buildEntryYears(); render(); fillFromExisting(); completed = true;
+        if (manual) say('syncStatus', cloud === null ? 'Cloud byl bezpečně inicializován. Data jsou připravena k synchronizaci mezi zařízeními.' : 'Synchronizováno. V zařízení i cloudu je ' + d.length + ' záznamů.');
       }
+      if (!completed) throw new Error('Data se mezitím měnila na jiném zařízení. Synchronizaci zopakujte. Místní data zůstala zachována.');
     } catch (err) {
-      if (manual) say('syncStatus', 'Synchronizace se nezdařila: ' + (err && err.message ? err.message : 'chyba připojení') + ' Data zůstala uložena místně.', true);
+      say('syncStatus', 'Synchronizace se nezdařila: ' + (err && err.message ? err.message : 'chyba připojení') + ' Místní data zůstala uložena.', true);
     } finally { syncing = false; }
   }
   function scheduleSync() {
@@ -783,6 +787,8 @@ details[open] summary { margin-bottom: 10px; }
   $('syncNow').addEventListener('click', function () { doSync(true); });
   window.addEventListener('online', function () { doSync(false); });
   window.addEventListener('focus', function () { doSync(false); });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) doSync(false); });
+  window.setInterval(function () { if (!document.hidden && navigator.onLine) doSync(false); }, 30000);
 
   /* ---------- start ---------- */
   buildEntryYears();
