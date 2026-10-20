@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#eef0f3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e1218" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="FVE">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+<title>FVE Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Figtree:wght@400;600;700&display=swap">
+<style>
+/* Layout: one column on phones. From 900px the entry form sits on the left, results on the right. */
+:root {
+  --bg: #eef0f3;
+  --surface: #ffffff;
+  --sunk: #f2f4f7;
+  --line: #dfe3e9;
+  --fg: #1b2330;
+  --muted: #5f6b7c;
+  --sun: #f59e0b;
+  --sun-ink: #9a4d06;
+  --grid: #8793a6;
+  --grid-ink: #44505f;
+  --save: #157a3a;
+  --cost: #b42318;
+  --on-sun: #1b2330;
+  --focus: #d97706;
+  --f-display: 'Bricolage Grotesque', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --f-body: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1218; --surface: #171c25; --sunk: #10151c; --line: #2a3240;
+    --fg: #e8ecf2; --muted: #9ba6b8; --sun: #f59e0b; --sun-ink: #fbbf24;
+    --grid: #6f7b8f; --grid-ink: #b4bfd0; --save: #4ade80; --cost: #f87171;
+    --on-sun: #1b2330; --focus: #fbbf24;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1218; --surface: #171c25; --sunk: #10151c; --line: #2a3240;
+  --fg: #e8ecf2; --muted: #9ba6b8; --sun: #f59e0b; --sun-ink: #fbbf24;
+  --grid: #6f7b8f; --grid-ink: #b4bfd0; --save: #4ade80; --cost: #f87171;
+  --on-sun: #1b2330; --focus: #fbbf24;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font: 15px/1.45 var(--f-body);
+  font-variant-numeric: tabular-nums;
+  padding-block: 20px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.wrap { max-width: 1100px; margin: 0 auto; display: grid; gap: 16px; }
+
+/* Header */
+.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; }
+h1 {
+  font: 800 clamp(26px, 7vw, 36px)/1.05 var(--f-display);
+  letter-spacing: -0.02em; margin: 0; display: flex; align-items: center; gap: 10px;
+}
+h1 svg { width: 1.05em; height: 1.05em; color: var(--sun); flex: none; }
+.sub { color: var(--muted); margin: 6px 0 0; font-size: 14px; }
+.price {
+  display: flex; align-items: center; gap: 8px; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; font-weight: 600; font-size: 14px;
+}
+.price input { width: 72px; text-align: right; font-weight: 700; }
+
+/* Form controls */
+input, select, textarea {
+  font-size: 16px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--surface); color: var(--fg); min-width: 0; max-width: 100%;
+}
+.price input { padding: 6px 8px; }
+textarea { width: 100%; min-height: 96px; resize: vertical; font-size: 13px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.btn {
+  border: 0; border-radius: 10px; padding: 12px 16px; font-weight: 700; cursor: pointer;
+  background: var(--sun); color: var(--on-sun); min-height: 44px;
+}
+.btn.ghost { background: transparent; color: var(--fg); border: 1px solid var(--line); }
+.mini {
+  border: 0; background: none; cursor: pointer; font-size: 13px; font-weight: 700; padding: 8px 10px;
+  border-radius: 8px; color: var(--muted); min-height: 36px;
+}
+.mini.danger { color: var(--cost); }
+.mini:hover { background: var(--sunk); }
+
+/* Cards */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; min-width: 0; }
+h2 { font: 800 18px/1.2 var(--f-display); margin: 0 0 12px; letter-spacing: -0.01em; }
+.note {
+  border: 1px dashed var(--line); border-radius: 12px; padding: 10px 14px; font-size: 14px;
+  color: var(--muted); background: var(--surface);
+}
+.note b { color: var(--fg); }
+
+/* Summary */
+.stats { display: grid; gap: 10px; }
+.stat {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "k v" "m v";
+  gap: 2px 12px; align-items: center;
+}
+.stat .k { grid-area: k; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; }
+.stat .v { grid-area: v; font: 800 26px/1.1 var(--f-display); text-align: right; white-space: nowrap; }
+.stat .m { grid-area: m; font-size: 14px; font-weight: 700; }
+.c-sun { color: var(--sun-ink); }
+.c-grid { color: var(--grid-ink); }
+.c-save { color: var(--save); }
+.c-cost { color: var(--cost); }
+
+/* Main layout */
+.main { display: grid; gap: 16px; grid-template-areas: "form" "results" "backup"; }
+.area-form { grid-area: form; align-self: start; }
+.area-results { grid-area: results; display: grid; gap: 16px; min-width: 0; align-content: start; }
+.area-backup { grid-area: backup; align-self: start; }
+
+form .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field label { font-size: 13px; font-weight: 700; }
+.field label small { font-weight: 600; color: var(--muted); }
+form .btn { width: 100%; margin-top: 4px; }
+.hint { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
+.status { font-size: 13px; font-weight: 600; margin: 10px 0 0; min-height: 1.4em; color: var(--save); }
+.status.bad { color: var(--cost); }
+
+.grp { border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px 12px; margin: 0 0 12px; min-width: 0; }
+.grp legend { font-size: 13px; font-weight: 700; padding: 0 6px; color: var(--sun-ink); }
+.grp.g legend { color: var(--grid-ink); }
+.grp .row { margin-bottom: 0; }
+.calc { margin: 10px 0 0; font-size: 14px; color: var(--muted); }
+.calc b { color: var(--fg); }
+.calc b.bad { color: var(--cost); font-weight: 600; }
+.rd2 { grid-column: 1 / -1; margin: 2px 0 0; font-size: 12px; color: var(--muted); }
+
+/* Chart */
+.chead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-bottom: 8px; }
+.chead h2 { margin: 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 8px; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.crow { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 8px; align-items: center; padding: 5px 0; border-top: 1px solid var(--line); }
+.crow:first-of-type { border-top: 0; }
+.cm { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+.lines { display: grid; gap: 3px; }
+.line { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 6px; align-items: center; }
+.track { height: 8px; background: var(--sunk); border-radius: 4px; overflow: hidden; }
+.fill { height: 100%; border-radius: 4px; }
+.fill.s { background: var(--sun); }
+.fill.g { background: var(--grid); }
+.cv { font-size: 12px; font-weight: 700; text-align: right; white-space: nowrap; }
+
+/* Tabs and records */
+.tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; background: var(--sunk); border-radius: 10px; padding: 3px; margin-bottom: 14px; }
+.tab { border: 0; background: none; border-radius: 8px; padding: 10px; font-weight: 700; color: var(--muted); cursor: pointer; min-height: 40px; }
+.tab[aria-selected="true"] { background: var(--surface); color: var(--sun-ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12); }
+.lhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.lhead span { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; }
+.lhead select { padding: 6px 10px; font-size: 14px; font-weight: 600; }
+.rec { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
+.rec:first-of-type { border-top: 0; }
+.rec h3 { margin: 0; font: 700 16px/1.25 var(--f-body); }
+.rec h3 span { color: var(--muted); font-weight: 600; }
+.tag { font-size: 12px; font-weight: 600; color: var(--muted); }
+.rh { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; min-width: 0; }
+.rd { text-align: right; }
+.confirm { font-size: 13px; font-weight: 600; white-space: nowrap; }
+.vals { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; margin: 4px 0 0; }
+.vals div { min-width: 0; }
+.vals dt { font-size: 12px; color: var(--muted); font-weight: 600; }
+.vals dd { margin: 0; font-weight: 700; white-space: nowrap; }
+.empty { padding: 20px 0; text-align: center; color: var(--muted); font-style: italic; }
+
+/* Backup */
+details summary { cursor: pointer; font: 800 18px/1.2 var(--f-display); letter-spacing: -0.01em; min-height: 32px; }
+details[open] summary { margin-bottom: 10px; }
+.bk { display: grid; gap: 12px; }
+.bk p { margin: 0; font-size: 14px; color: var(--muted); }
+.bk .acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.bk .acts .btn { flex: 1 1 140px; }
+.bk input[type="file"] { width: 100%; font-size: 14px; }
+
+@media (min-width: 700px) {
+  .stats { grid-template-columns: repeat(3, 1fr); }
+  .vals { grid-template-columns: repeat(4, 1fr); }
+}
+@media (min-width: 900px) {
+  .main { grid-template-columns: 320px minmax(0, 1fr); grid-template-rows: auto 1fr; grid-template-areas: "form results" "backup results"; align-items: start; }
+}
+@media (max-width: 380px) {
+  .stat .v { font-size: 22px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="currentColor"/><path d="M12 2.5v2.3M12 19.2v2.3M2.5 12h2.3M19.2 12h2.3M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/></svg>
+        FVE Tracker
+      </h1>
+      <p class="sub">Ohřev vody: výroba ze slunce a dokup ze sítě</p>
+    </div>
+    <label class="price" for="kwPrice">Cena Kč/kWh
+      <input type="number" id="kwPrice" step="0.1" min="0" inputmode="decimal" value="5.0">
+    </label>
+  </header>
+
+  <div id="notes"></div>
+
+  <section class="stats" aria-label="Souhrn za celou historii">
+    <div class="stat"><span class="k">Vyrobeno (slunce)</span><span class="v c-sun" id="sTot">0,0 kWh</span><span class="m c-save" id="sTotK">Úspora: 0,0 Kč</span></div>
+    <div class="stat"><span class="k">Dokoupeno (síť)</span><span class="v c-grid" id="sGrid">0,0 kWh</span><span class="m c-cost" id="sGridK">Náklady: 0,0 Kč</span></div>
+    <div class="stat"><span class="k">Celková spotřeba</span><span class="v" id="sCon">0,0 kWh</span><span class="m c-sun" id="sShare">Podíl FVE: 0 %</span></div>
+  </section>
+
+  <div class="main">
+    <form class="card area-form" id="fveForm" novalidate>
+      <h2>Zapsat měsíc</h2>
+      <div class="row">
+        <div class="field"><label for="inpY">Rok</label><select id="inpY"></select></div>
+        <div class="field"><label for="inpM">Měsíc</label>
+          <select id="inpM">
+            <option value="1">Leden</option><option value="2">Únor</option><option value="3">Březen</option>
+            <option value="4">Duben</option><option value="5">Květen</option><option value="6">Červen</option>
+            <option value="7">Červenec</option><option value="8">Srpen</option><option value="9">Září</option>
+            <option value="10">Říjen</option><option value="11">Listopad</option><option value="12">Prosinec</option>
+          </select>
+        </div>
+      </div>
+      <fieldset class="grp">
+        <legend>Slunce (FVE)</legend>
+        <div class="row">
+          <div class="field"><label for="inpEs">Počáteční stav</label><input type="number" id="inpEs" step="any" min="0" inputmode="decimal" placeholder="kWh"></div>
+          <div class="field"><label for="inpEe">Konečný stav</label><input type="number" id="inpEe" step="any" min="0" inputmode="decimal" placeholder="kWh"></div>
+        </div>
+        <p class="calc">Vyrobeno: <b id="calcE">–</b></p>
+      </fieldset>
+      <fieldset class="grp g">
+        <legend>Síť (dokup)</legend>
+        <div class="row">
+          <div class="field"><label for="inpGs">Počáteční stav</label><input type="number" id="inpGs" step="any" min="0" inputmode="decimal" placeholder="kWh"></div>
+          <div class="field"><label for="inpGe">Konečný stav</label><input type="number" id="inpGe" step="any" min="0" inputmode="decimal" placeholder="kWh"></div>
+        </div>
+        <p class="calc">Dokoupeno: <b id="calcG">–</b></p>
+      </fieldset>
+      <button type="submit" class="btn">Uložit záznam</button>
+      <p class="hint" id="fHint">Cena za kWh se uloží s každým měsícem zvlášť.</p>
+      <p class="status" id="fStatus" role="status" aria-live="polite"></p>
+    </form>
+
+    <div class="area-results">
+      <section class="card" aria-labelledby="chTitle">
+        <div class="chead">
+          <h2 id="chTitle">Srovnání po měsících</h2>
+          <select id="fltG" aria-label="Rok grafu"></select>
+        </div>
+        <div class="legend"><span><i style="background:var(--sun)"></i>Slunce (kWh)</span><span><i style="background:var(--grid)"></i>Síť (kWh)</span></div>
+        <div id="chart"></div>
+      </section>
+
+      <section class="card">
+        <div class="tabs" role="tablist">
+          <button type="button" class="tab" id="tabM" role="tab" aria-selected="true">Měsíce</button>
+          <button type="button" class="tab" id="tabY" role="tab" aria-selected="false">Roky</button>
+        </div>
+        <div id="paneM" role="tabpanel">
+          <div class="lhead"><span>Historie měsíců</span><select id="fltT" aria-label="Filtr roku"></select></div>
+          <div id="listM"></div>
+        </div>
+        <div id="paneY" role="tabpanel" hidden>
+          <div class="lhead"><span>Celkem po letech</span></div>
+          <div id="listY"></div>
+        </div>
+      </section>
+    </div>
+
+    <details class="card area-backup">
+      <summary>Záloha a přenos dat</summary>
+      <div class="bk">
+        <p>Záznamy jsou uložené jen v tomto prohlížeči. Do jiného zařízení je přeneste zálohou: na jednom ji zkopírujte, na druhém vložte do pole a načtěte.</p>
+        <div class="field">
+          <label for="backupText">Text zálohy</label>
+          <textarea id="backupText" spellcheck="false" placeholder="Sem vložte zálohu, nebo vyberte soubor níže."></textarea>
+        </div>
+        <div class="acts">
+          <button type="button" class="btn" id="copyBackup">Zkopírovat zálohu</button>
+          <button type="button" class="btn ghost" id="doImport">Načíst data</button>
+        </div>
+        <div class="field">
+          <label for="cloudFile">Nebo vyberte soubor se zálohou</label>
+          <input type="file" id="cloudFile">
+        </div>
+        <p class="status" id="bStatus" role="status" aria-live="polite"></p>
+      </div>
+    </details>
+  </div>
+</div>
+
+<script>
+(function () {
+  var MN = ['Leden','Únor','Březen','Duben','Květen','Červen','Červenec','Srpen','Září','Říjen','Listopad','Prosinec'];
+  var AB = ['Led','Úno','Bře','Dub','Kvě','Čvn','Čvc','Srp','Zář','Říj','Lis','Pro'];
+  var $ = function (id) { return document.getElementById(id); };
+  var f1 = function (n) { return n.toLocaleString('cs-CZ', { minimumFractionDigits: 1, maximumFractionDigits: 1 }); };
+  var cY = new Date().getFullYear(), cM = new Date().getMonth() + 1;
+
+  var storageOk = true;
+  var store = {
+    get: function (k) { try { return localStorage.getItem(k); } catch (e) { storageOk = false; return null; } },
+    set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) { storageOk = false; } }
+  };
+  try { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); } catch (e) { storageOk = false; }
+
+  function clean(arr) {
+    if (!Array.isArray(arr)) return [];
+    var out = [], seen = {};
+    arr.forEach(function (x, i) {
+      if (!x || typeof x !== 'object') return;
+      var year = parseInt(x.year, 10), month = parseInt(x.month, 10), energy = parseFloat(x.energy);
+      if (!(year >= 1990 && year <= 2100) || !(month >= 1 && month <= 12) || !isFinite(energy) || energy < 0) return;
+      var g = parseFloat(x.grid), sp = parseFloat(x.savedPrice), key = year * 100 + month;
+      if (seen[key]) return;
+      seen[key] = 1;
+      var rec = {
+        id: isFinite(+x.id) ? +x.id : Date.now() + i,
+        year: year, month: month, energy: energy,
+        grid: isFinite(g) && g >= 0 ? g : 0,
+        savedPrice: isFinite(sp) && sp >= 0 ? sp : 5
+      };
+      ['eStart', 'eEnd', 'gStart', 'gEnd'].forEach(function (k) {
+        var n = parseFloat(x[k]);
+        if (isFinite(n) && n >= 0) rec[k] = n;
+      });
+      out.push(rec);
+    });
+    return out;
+  }
+
+  var d = [];
+  try { d = clean(JSON.parse(store.get('fveD') || '[]')); } catch (e) { d = []; }
+  var p0 = parseFloat(store.get('fveP'));
+  var prc = isFinite(p0) && p0 >= 0 ? p0 : 5;
+
+  function save() { store.set('fveD', JSON.stringify(d)); store.set('fveP', String(prc)); }
+
+  var SAMPLE_E = [22, 45, 90, 140, 175, 190, 195, 180, 130, 70, 30, 15];
+  var SAMPLE_G = [150, 120, 80, 40, 20, 10, 8, 12, 45, 90, 130, 160];
+  function sample() {
+    var out = [];
+    for (var m = 1; m <= cM; m++) out.push({ id: -m, year: cY, month: m, energy: SAMPLE_E[m - 1], grid: SAMPLE_G[m - 1], savedPrice: 5 });
+    return out;
+  }
+  function V() { return d.length ? d : sample(); }
+
+  var fy = null, ft = 'all', view = 'm', pendDel = null, pendImp = false, prefilled = false;
+
+  /* ---------- selects ---------- */
+  var iY = $('inpY'), iM = $('inpM'), iEs = $('inpEs'), iEe = $('inpEe'), iGs = $('inpGs'), iGe = $('inpGe'), pI = $('kwPrice');
+
+  function buildEntryYears() {
+    var min = cY - 5, max = cY + 1;
+    d.forEach(function (x) { if (x.year < min) min = x.year; if (x.year + 1 > max) max = x.year + 1; });
+    var keep = iY.value, html = '';
+    for (var y = max; y >= min; y--) html += '<option value="' + y + '">' + y + '</option>';
+    iY.innerHTML = html;
+    iY.value = keep && iY.querySelector('option[value="' + keep + '"]') ? keep : String(cY);
+  }
+
+  /* ---------- rendering ---------- */
+  function renderNotes() {
+    var h = '';
+    if (!storageOk) h += '<div class="note"><b>Ukládání je vypnuté.</b> Prohlížeč nepovoluje ukládání dat, záznamy po zavření stránky zmizí. Používejte zálohu níže.</div>';
+    if (!d.length) h += '<div class="note"><b>Ukázková data.</b> Po uložení prvního měsíce nebo načtení zálohy zmizí.</div>';
+    $('notes').innerHTML = h;
+    $('notes').hidden = !h;
+  }
+
+  function renderStats() {
+    var v = V(), tE = 0, tG = 0, tS = 0, tC = 0;
+    v.forEach(function (x) { tE += x.energy; tG += x.grid; tS += x.energy * x.savedPrice; tC += x.grid * x.savedPrice; });
+    var con = tE + tG, pct = con > 0 ? (tE / con) * 100 : 0;
+    $('sTot').textContent = f1(tE) + ' kWh';
+    $('sTotK').textContent = 'Úspora: ' + f1(tS) + ' Kč';
+    $('sGrid').textContent = f1(tG) + ' kWh';
+    $('sGridK').textContent = 'Náklady: ' + f1(tC) + ' Kč';
+    $('sCon').textContent = f1(con) + ' kWh';
+    $('sShare').textContent = 'Podíl FVE: ' + Math.round(pct) + ' %';
+  }
+
+  function yearsOf(v) {
+    var set = {};
+    v.forEach(function (x) { set[x.year] = 1; });
+    return Object.keys(set).map(Number).sort(function (a, b) { return b - a; });
+  }
+
+  function renderChart() {
+    var v = V(), ys = yearsOf(v);
+    var opts = ys.slice();
+    if (opts.indexOf(cY) === -1) opts.unshift(cY);
+    opts.sort(function (a, b) { return b - a; });
+    if (fy === null || opts.indexOf(fy) === -1) fy = ys.indexOf(cY) !== -1 ? cY : (ys[0] || cY);
+    var sel = $('fltG');
+    sel.innerHTML = opts.map(function (y) { return '<option value="' + y + '"' + (y === fy ? ' selected' : '') + '>' + y + '</option>'; }).join('');
+
+    var e = [], g = [], i;
+    for (i = 0; i < 12; i++) { e.push(0); g.push(0); }
+    v.forEach(function (x) { if (x.year === fy) { e[x.month - 1] = x.energy; g[x.month - 1] = x.grid; } });
+    var max = Math.max.apply(null, e.concat(g)) || 1;
+    function line(val, cls, ink) {
+      var w = val > 0 ? Math.max(1.5, (val / max) * 100) : 0;
+      return '<div class="line"><div class="track"><div class="fill ' + cls + '" style="width:' + w.toFixed(1) + '%"></div></div>' +
+             '<span class="cv ' + ink + '">' + (val > 0 ? Math.round(val) : '–') + '</span></div>';
+    }
+    var h = '';
+    for (i = 0; i < 12; i++) {
+      h += '<div class="crow" title="' + MN[i] + ' ' + fy + '"><span class="cm">' + AB[i] + '</span><div class="lines">' +
+           line(e[i], 's', 'c-sun') + line(g[i], 'g', 'c-grid') + '</div></div>';
+    }
+    $('chart').innerHTML = h;
+  }
+
+  function delHtml(id) {
+    if (!d.length) return '';
+    if (pendDel === id) return '<span class="confirm">Smazat? <button type="button" class="mini danger" data-yes="' + id + '">Ano</button><button type="button" class="mini" data-no="1">Ne</button></span>';
+    return '<button type="button" class="mini danger" data-del="' + id + '">Smazat</button>';
+  }
+
+  function valsHtml(en, gr, sav, cost) {
+    return '<dl class="vals">' +
+      '<div><dt>Slunce</dt><dd class="c-sun">' + f1(en) + ' kWh</dd></div>' +
+      '<div><dt>Síť</dt><dd class="c-grid">' + f1(gr) + ' kWh</dd></div>' +
+      '<div><dt>Úspora</dt><dd class="c-save">' + f1(sav) + ' Kč</dd></div>' +
+      '<div><dt>Náklady</dt><dd class="c-cost">' + f1(cost) + ' Kč</dd></div></dl>';
+  }
+
+  function readingsHtml(x) {
+    if (x.eStart === undefined || x.eEnd === undefined || x.gStart === undefined || x.gEnd === undefined) return '';
+    return '<p class="rd2">Stavy: slunce ' + f1(x.eStart) + ' → ' + f1(x.eEnd) + ' · síť ' + f1(x.gStart) + ' → ' + f1(x.gEnd) + '</p>';
+  }
+
+  function renderList() {
+    var v = V(), ys = yearsOf(v);
+    if (ft !== 'all' && ys.indexOf(Number(ft)) === -1) ft = 'all';
+    $('fltT').innerHTML = '<option value="all"' + (ft === 'all' ? ' selected' : '') + '>Všechny roky</option>' +
+      ys.map(function (y) { return '<option value="' + y + '"' + (String(y) === String(ft) ? ' selected' : '') + '>' + y + '</option>'; }).join('');
+    var rows = v.slice().sort(function (a, b) { return b.year - a.year || b.month - a.month; });
+    if (ft !== 'all') rows = rows.filter(function (x) { return x.year === Number(ft); });
+    $('listM').innerHTML = rows.length ? rows.map(function (x) {
+      return '<article class="rec"><div class="rh"><h3>' + MN[x.month - 1] + ' <span>' + x.year + '</span></h3>' +
+             '<span class="tag">' + f1(x.savedPrice) + ' Kč/kWh</span></div><div class="rd">' + delHtml(x.id) + '</div>' +
+             valsHtml(x.energy, x.grid, x.energy * x.savedPrice, x.grid * x.savedPrice) + readingsHtml(x) + '</article>';
+    }).join('') : '<p class="empty">Bez dat</p>';
+  }
+
+  function renderYears() {
+    var v = V(), m = {};
+    v.forEach(function (x) {
+      var o = m[x.year] || (m[x.year] = { e: 0, g: 0, s: 0, c: 0 });
+      o.e += x.energy; o.g += x.grid; o.s += x.energy * x.savedPrice; o.c += x.grid * x.savedPrice;
+    });
+    var ys = yearsOf(v);
+    $('listY').innerHTML = ys.length ? ys.map(function (y) {
+      var o = m[y], con = o.e + o.g, pct = con > 0 ? Math.round((o.e / con) * 100) : 0;
+      return '<article class="rec"><div class="rh"><h3>' + y + '</h3><span class="tag">Podíl FVE ' + pct + ' %</span></div><div></div>' +
+             valsHtml(o.e, o.g, o.s, o.c) + '</article>';
+    }).join('') : '<p class="empty">Bez dat</p>';
+  }
+
+  function render() {
+    renderNotes(); renderStats(); renderChart(); renderList(); renderYears();
+  }
+
+  /* ---------- status helper ---------- */
+  function say(id, msg, bad) {
+    var el = $(id);
+    el.textContent = msg;
+    el.className = 'status' + (bad ? ' bad' : '');
+  }
+
+  /* ---------- entry form ---------- */
+  var HINT = 'Cena za kWh se uloží s každým měsícem zvlášť.';
+  function setVal(el, n) { el.value = (typeof n === 'number' && isFinite(n)) ? String(n) : ''; }
+  function diff(s1, e1) {
+    var a = parseFloat(s1), b = parseFloat(e1);
+    if (!isFinite(a) || !isFinite(b)) return null;
+    return Math.round((b - a) * 1000) / 1000;
+  }
+  function showCalc(id, val, start, min) {
+    var el = $(id), s1 = parseFloat(start);
+    if (min !== null && isFinite(s1) && s1 < min - 1e-9) { el.textContent = 'počáteční stav je nižší než dřívější konečný (' + f1(min) + ' kWh)'; el.className = 'bad'; }
+    else if (val === null) { el.textContent = '–'; el.className = ''; }
+    else if (val < 0) { el.textContent = 'konečný stav je nižší než počáteční'; el.className = 'bad'; }
+    else { el.textContent = f1(val) + ' kWh'; el.className = ''; }
+  }
+  function updateCalc() {
+    var y = Number(iY.value), mo = Number(iM.value);
+    var eRec = prevEnd(y, mo, 'eEnd'), gRec = prevEnd(y, mo, 'gEnd');
+    iEs.min = eRec ? String(eRec.eEnd) : '0';
+    iGs.min = gRec ? String(gRec.gEnd) : '0';
+    showCalc('calcE', diff(iEs.value, iEe.value), iEs.value, eRec ? eRec.eEnd : null);
+    showCalc('calcG', diff(iGs.value, iGe.value), iGs.value, gRec ? gRec.gEnd : null);
+  }
+  function fillFromExisting() {
+    var y = Number(iY.value), mo = Number(iM.value), hint = $('fHint'), ex = null;
+    d.forEach(function (x) { if (x.year === y && x.month === mo) ex = x; });
+    [iEs, iEe, iGs, iGe].forEach(function (el) { el.value = ''; });
+    if (ex && ['eStart', 'eEnd', 'gStart', 'gEnd'].some(function (k) { return ex[k] !== undefined; })) {
+      setVal(iEs, ex.eStart); setVal(iEe, ex.eEnd); setVal(iGs, ex.gStart); setVal(iGe, ex.gEnd);
+      hint.textContent = MN[mo - 1] + ' ' + y + ' už je zapsaný. Uložením ho přepíšete.';
+    } else {
+      var eRec = prevEnd(y, mo, 'eEnd'), gRec = prevEnd(y, mo, 'gEnd');
+      if (eRec) setVal(iEs, eRec.eEnd);
+      if (gRec) setVal(iGs, gRec.gEnd);
+      var src = '';
+      if (eRec || gRec) {
+        src = (eRec && gRec && eRec.id === gRec.id) ? 'z konce měsíce ' + MN[eRec.month - 1] + ' ' + eRec.year : 'z posledních zapsaných stavů';
+        src = 'Počáteční stavy jsou převzaté ' + src + '. ';
+      }
+      if (ex) hint.textContent = MN[mo - 1] + ' ' + y + ' je zapsaný jen jako spotřeba (' + f1(ex.energy) + ' kWh slunce, ' + f1(ex.grid) + ' kWh síť). Zadáním stavů ho přepíšete. ' + src;
+      else hint.textContent = src + HINT;
+    }
+    updateCalc();
+  }
+  function prevEnd(y, mo, key) {
+    var best = null, cur = y * 100 + mo;
+    d.forEach(function (x) {
+      var k = x.year * 100 + x.month;
+      if (x[key] === undefined || k >= cur) return;
+      if (!best || k > best.year * 100 + best.month) best = x;
+    });
+    return best;
+  }
+  function selectNextMonth() {
+    var last = null;
+    d.forEach(function (x) { if (!last || x.year * 100 + x.month > last.year * 100 + last.month) last = x; });
+    if (last) {
+      iY.value = String(last.month === 12 ? last.year + 1 : last.year);
+      iM.value = String(last.month === 12 ? 1 : last.month + 1);
+    } else {
+      iM.value = String(cM);
+    }
+    fillFromExisting();
+  }
+  iY.addEventListener('change', fillFromExisting);
+  iM.addEventListener('change', fillFromExisting);
+  [iEs, iEe, iGs, iGe].forEach(function (el) { el.addEventListener('input', updateCalc); });
+
+  $('fveForm').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var y = Number(iY.value), mo = Number(iM.value), idx = -1;
+    var es = parseFloat(iEs.value), ee = parseFloat(iEe.value), gs = parseFloat(iGs.value), ge = parseFloat(iGe.value);
+    if (![es, ee, gs, ge].every(function (n) { return isFinite(n) && n >= 0; })) { say('fStatus', 'Vyplňte všechny čtyři stavy jako čísla od nuly výš.', true); return; }
+    if (ee < es || ge < gs) { say('fStatus', 'Konečný stav nesmí být nižší než počáteční.', true); return; }
+    var eMin = prevEnd(y, mo, 'eEnd'), gMin = prevEnd(y, mo, 'gEnd');
+    if (eMin && es < eMin.eEnd - 1e-9) { say('fStatus', 'Počáteční stav slunce (' + f1(es) + ') nesmí být nižší než konečný stav z měsíce ' + MN[eMin.month - 1] + ' ' + eMin.year + ' (' + f1(eMin.eEnd) + ').', true); return; }
+    if (gMin && gs < gMin.gEnd - 1e-9) { say('fStatus', 'Počáteční stav sítě (' + f1(gs) + ') nesmí být nižší než konečný stav z měsíce ' + MN[gMin.month - 1] + ' ' + gMin.year + ' (' + f1(gMin.gEnd) + ').', true); return; }
+    var en = Math.round((ee - es) * 1000) / 1000, gr = Math.round((ge - gs) * 1000) / 1000;
+    d.forEach(function (x, i) { if (x.year === y && x.month === mo) idx = i; });
+    var rec = { year: y, month: mo, energy: en, grid: gr, savedPrice: prc, eStart: es, eEnd: ee, gStart: gs, gEnd: ge };
+    if (idx >= 0) { rec.id = d[idx].id; d[idx] = rec; } else { rec.id = Date.now(); d.push(rec); }
+    save(); fy = y; buildEntryYears();
+    var nxY = mo === 12 ? y + 1 : y, nxM = mo === 12 ? 1 : mo + 1;
+    iY.value = String(nxY); iM.value = String(nxM);
+    render(); fillFromExisting();
+    say('fStatus', 'Uloženo: ' + MN[mo - 1] + ' ' + y + ', slunce ' + f1(en) + ' kWh, síť ' + f1(gr) + ' kWh. Formulář je připravený na ' + MN[nxM - 1] + ' ' + nxY + '.' + (storageOk ? '' : ' Pozor, data se uloží jen do zavření stránky.'));
+  });
+
+  pI.value = prc.toFixed(1);
+  pI.addEventListener('input', function () {
+    var v = parseFloat(pI.value);
+    if (isFinite(v) && v >= 0) { prc = v; store.set('fveP', String(prc)); }
+  });
+  pI.addEventListener('change', function () { pI.value = prc.toFixed(1); });
+
+  /* ---------- filters, tabs, delete ---------- */
+  $('fltG').addEventListener('change', function () { fy = Number(this.value); renderChart(); });
+  $('fltT').addEventListener('change', function () { ft = this.value; pendDel = null; renderList(); });
+
+  function setView(v) {
+    view = v;
+    $('paneM').hidden = v !== 'm';
+    $('paneY').hidden = v !== 'y';
+    $('tabM').setAttribute('aria-selected', String(v === 'm'));
+    $('tabY').setAttribute('aria-selected', String(v === 'y'));
+  }
+  $('tabM').addEventListener('click', function () { setView('m'); });
+  $('tabY').addEventListener('click', function () { setView('y'); });
+
+  $('listM').addEventListener('click', function (ev) {
+    var t = ev.target.closest('button');
+    if (!t) return;
+    if (t.hasAttribute('data-del')) { pendDel = Number(t.getAttribute('data-del')); renderList(); }
+    else if (t.hasAttribute('data-no')) { pendDel = null; renderList(); }
+    else if (t.hasAttribute('data-yes')) {
+      var id = Number(t.getAttribute('data-yes'));
+      d = d.filter(function (x) { return x.id !== id; });
+      pendDel = null; save(); buildEntryYears(); fillFromExisting(); render();
+    }
+  });
+
+  /* ---------- backup ---------- */
+  var ta = $('backupText');
+  var importBtn = $('doImport');
+  function resetImport() { pendImp = false; importBtn.textContent = 'Načíst data'; }
+  ta.addEventListener('input', resetImport);
+
+  $('copyBackup').addEventListener('click', async function () {
+    if (!d.length) { say('bStatus', 'Zatím není co zálohovat. Nejdřív uložte aspoň jeden měsíc.', true); return; }
+    ta.value = JSON.stringify({ data: d, cena: prc });
+    resetImport();
+    try {
+      await navigator.clipboard.writeText(ta.value);
+      say('bStatus', 'Záloha je zkopírovaná (' + d.length + ' záznamů).');
+    } catch (e) {
+      ta.focus(); ta.select();
+      say('bStatus', 'Záloha je v poli a je označená. Zkopírujte ji ručně.');
+    }
+  });
+
+  $('cloudFile').addEventListener('change', function () {
+    var file = this.files && this.files[0];
+    if (!file) return;
+    var r = new FileReader();
+    r.onload = function () {
+      ta.value = String(r.result || '').replace(/^﻿/, '');
+      resetImport();
+      say('bStatus', 'Soubor je načtený v poli. Stiskněte Načíst data.');
+    };
+    r.onerror = function () { say('bStatus', 'Soubor se nepodařilo přečíst.', true); };
+    r.readAsText(file);
+  });
+
+  function parseBackup(txt) {
+    var o;
+    try { o = JSON.parse(String(txt).trim()); } catch (e) { return null; }
+    var list = clean(Array.isArray(o) ? o : (o && o.data));
+    return list.length ? { list: list, cena: o && parseFloat(o.cena) } : null;
+  }
+
+  importBtn.addEventListener('click', function () {
+    var res = parseBackup(ta.value);
+    if (!res) { resetImport(); say('bStatus', 'V poli není platná záloha. Vložte celý text zálohy.', true); return; }
+    if (!pendImp) {
+      pendImp = true;
+      importBtn.textContent = 'Potvrdit nahrazení';
+      say('bStatus', 'Načtením se nahradí všechna data v tomto zařízení (' + res.list.length + ' záznamů ze zálohy). Potvrďte tlačítkem.', true);
+      return;
+    }
+    d = res.list;
+    if (isFinite(res.cena) && res.cena >= 0) { prc = res.cena; pI.value = prc.toFixed(1); }
+    pendDel = null; fy = null; save(); buildEntryYears(); selectNextMonth(); render(); resetImport();
+    say('bStatus', 'Načteno ' + d.length + ' záznamů.');
+  });
+
+  /* ---------- start ---------- */
+  buildEntryYears();
+  selectNextMonth();
+  render();
+})();
+
+(function () {
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    window.addEventListener('load', function () { navigator.serviceWorker.register('./sw.js').catch(function () {}); });
+  }
+})();
+</script>
+
+</body>
+</html>
