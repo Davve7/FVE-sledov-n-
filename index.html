@@ -65,8 +65,12 @@
     .calendar-day:hover { border-color:var(--focus); }
     .calendar-week-caption { margin-top:9px; color:var(--muted); font-size:11px; }
     @media (max-width:480px) { .monthly-row { grid-template-columns:58px minmax(0,1fr); gap:7px; padding:7px 4px; } .monthly-bar-line { grid-template-columns:34px minmax(0,1fr) 64px; gap:5px; } .monthly-series-label { font-size:10px; } .monthly-value { font-size:11px; } .year-total-grid { grid-template-columns:1fr 1fr; } }
-  </style>
-<title>FVE sledovani</title>
+    .legacy-cleanup{margin-top:12px;padding-top:12px;border-top:1px solid var(--line, #dce1e8)}
+  .legacy-cleanup p{margin:6px 0 10px}
+  .legacy-cleanup-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--line, #dce1e8);flex-wrap:wrap}
+  .legacy-cleanup-row span{flex:1;min-width:180px}
+</style>
+<title>FVE Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Figtree:wght@400;600;700&display=swap">
@@ -601,6 +605,9 @@ details[open] summary { margin-bottom: 10px; }
       h += '<div class="note"><b>Kontrola původu dat</b><br>V tomto prohlížeči je načteno: '+weeklyCount+' týdenních odečtů FVE, '+meterCount+' odečtů elektroměru a '+legacyCount+' starších měsíčních záznamů. Aplikace nevytváří ukázkové odečty; souhrny se počítají z těchto uložených záznamů.';
       if (syncInfo && syncInfo.at) h += '<br>Poslední úspěšná synchronizace: '+new Date(syncInfo.at).toLocaleString('cs-CZ')+'. Firebase tehdy obsahoval '+(Number(syncInfo.weekly)||0)+' týdenních odečtů a '+(Number(syncInfo.meter)||0)+' odečtů elektroměru.';
       else h += '<br>Původ záznamů zatím není rozlišen: mohou pocházet z místního úložiště tohoto prohlížeče nebo z dřívější synchronizace.';
+      var legacyRows=d.filter(function(x){return x&&!x._deleted;}).slice().sort(function(a,b){return b.year-a.year||b.month-a.month;});
+      if(legacyRows.length){h+='<div class="legacy-cleanup"><b>Starší měsíční záznamy</b><p>Tyto staré záznamy se stále započítávají do hlavních souhrnů. Můžeš je odstranit jednotlivě:</p>';
+        legacyRows.forEach(function(x){h+='<div class="legacy-cleanup-row"><span>'+MN[x.month-1]+' '+x.year+' · výroba '+f1(x.energy)+' kWh · dokup '+f1(x.grid)+' kWh</span><button type="button" class="mini danger" data-delete-legacy="'+x.year+'-'+x.month+'">Smazat</button></div>';});h+='</div>';}
       h += '</div>';
     }
     $('notes').innerHTML = h;
@@ -1078,6 +1085,16 @@ details[open] summary { margin-bottom: 10px; }
   }
   $('tabM').addEventListener('click', function () { setView('m'); });
   $('tabY').addEventListener('click', function () { setView('y'); });
+
+  $('notes').addEventListener('click', function(ev){
+    var btn=ev.target.closest('[data-delete-legacy]'); if(!btn)return;
+    var parts=btn.getAttribute('data-delete-legacy').split('-'),year=Number(parts[0]),month=Number(parts[1]);
+    var rec=d.find(function(x){return x.year===year&&x.month===month&&!x._deleted;}); if(!rec)return;
+    if(!window.confirm('Opravdu smazat starý měsíční záznam '+MN[month-1]+' '+year+'? Záznam se odstraní z místních souhrnů a změna se synchronizuje do Firebase.'))return;
+    deletions[year+'-'+month]=Math.max(Date.now(),(+rec.updatedAt||0)+1);
+    d=d.filter(function(x){return !(x.year===year&&x.month===month);});
+    pendDel=null;save();buildEntryYears();fillFromExisting();render();
+  });
 
   $('listM').addEventListener('click', function (ev) {
     var t = ev.target.closest('button');
