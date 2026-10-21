@@ -529,6 +529,32 @@ textarea:disabled {
 }
 </style>
 
+
+<style>
+/* Datumové pole: některé desktopové prohlížeče vykreslují text
+   input[type=date] přes interní ovládací prvek a ignorují běžnou barvu inputu. */
+input[type="date"] {
+  color: #1b2330 !important;
+  -webkit-text-fill-color: #1b2330 !important;
+  color-scheme: light !important;
+  background: #fffaf0 !important;
+  font: inherit;
+}
+input[type="date"]::-webkit-datetime-edit,
+input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+input[type="date"]::-webkit-datetime-edit-text,
+input[type="date"]::-webkit-datetime-edit-month-field,
+input[type="date"]::-webkit-datetime-edit-day-field,
+input[type="date"]::-webkit-datetime-edit-year-field {
+  color: #1b2330 !important;
+  -webkit-text-fill-color: #1b2330 !important;
+}
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 1 !important;
+  cursor: pointer;
+}
+</style>
+
 </head>
 <body>
 
