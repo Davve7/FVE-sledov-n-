@@ -483,6 +483,52 @@ details[open] summary { margin-bottom: 10px; }
 }
 </style>
 
+
+<style>
+/* Uložené odečty jsou nahoře v kartě, aby byly dobře vidět i na desktopu. */
+.saved-readings { margin: 16px 0 20px; padding: 12px 14px; border: 1px solid rgba(130,145,165,.24); border-radius: 16px; background: rgba(255,255,255,.45); }
+.saved-readings h3 { margin: 0 0 8px !important; }
+.saved-readings .workflow-list { max-height: 360px; overflow-y: auto; }
+@media (min-width: 900px) {
+  .saved-readings { background: rgba(255,255,255,.58); }
+  .saved-readings .workflow-list { max-height: 420px; }
+}
+@media (prefers-color-scheme: dark) {
+  .saved-readings { background: rgba(15,23,42,.28); }
+}
+</style>
+
+
+<style>
+/* Oprava čitelnosti formulářů: na Windows/PC v tmavém režimu prohlížeče
+   se text polí dědil jako světlý na světlém pozadí. */
+input,
+select,
+textarea,
+input[type="date"],
+input[type="number"],
+input[type="text"] {
+  color: #1b2330 !important;
+  -webkit-text-fill-color: #1b2330 !important;
+  background-color: #fffaf0 !important;
+  color-scheme: light;
+  caret-color: #1b2330 !important;
+}
+input::placeholder,
+textarea::placeholder {
+  color: #7b8491 !important;
+  -webkit-text-fill-color: #7b8491 !important;
+  opacity: 1;
+}
+input:disabled,
+select:disabled,
+textarea:disabled {
+  color: #6b7280 !important;
+  -webkit-text-fill-color: #6b7280 !important;
+  opacity: 1;
+}
+</style>
+
 </head>
 <body>
 
@@ -517,16 +563,18 @@ details[open] summary { margin-bottom: 10px; }
     <form class="card" id="weeklyForm" novalidate>
       <div class="workflow-title"><h2>Týdenní odečet FVE</h2><svg class="section-art" viewBox="0 0 88 68" role="img" aria-label="Slunce a solární panel"><defs><linearGradient id="panelGlow" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#244c83"/><stop offset="1" stop-color="#102746"/></linearGradient></defs><g stroke="#f5a000" stroke-width="3.5" stroke-linecap="round"><path d="M20 4v6M20 30v6M5 20h6M29 20h6M9 9l4 4M27 27l4 4M9 31l4-4M27 13l4-4"/></g><circle cx="20" cy="20" r="9" fill="#ffb51b"/><path d="M34 37L76 37L84 59L27 59Z" fill="url(#panelGlow)" stroke="#6e9ac8" stroke-width="2"/><path d="M44 38L40 59M56 38L56 59M68 38L72 59M30 48H80" stroke="#77a8df" stroke-width="1.5"/><path d="M23 63H85" stroke="#8a98a8" stroke-width="3" stroke-linecap="round"/></svg></div>
       <p class="hint">Každou neděli večer zadej aktuální stavy čítačů FVE: výrobu a dokup ze sítě. Roční přírůstky se počítají samostatně; na začátku nového roku začíná evidence ANTIK od nuly.</p>
+      <div class="saved-readings"><h3>Poslední týdenní odečty FVE</h3><div id="weeklyList" class="workflow-list"></div></div>
       <div class="row"><div class="field"><label for="weeklyDateDisplay">Datum odečtu</label><div class="date-picker-wrap"><input id="weeklyDate" class="native-date-value" type="date" tabindex="-1" aria-hidden="true"><button id="weeklyDateDisplay" class="date-picker-display" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="weeklyCalendar"><span id="weeklyDateDisplayText">Vyber datum</span><span aria-hidden="true">▦</span></button><div id="weeklyCalendar" class="week-calendar" role="dialog" aria-label="Výběr data s čísly týdnů" hidden><div class="week-calendar-head"><button id="calendarPrev" class="calendar-nav" type="button" aria-label="Předchozí měsíc">‹</button><div id="calendarTitle" class="week-calendar-title"></div><button id="calendarNext" class="calendar-nav" type="button" aria-label="Následující měsíc">›</button></div><div id="weekCalendarGrid" class="week-calendar-grid"></div><div class="calendar-week-caption">Čísla vlevo jsou ISO týdny (pondělí–neděle).</div></div></div><span id="weeklyIsoWeek" class="week-number-note" aria-live="polite">Vybraný týden: <strong>–</strong></span></div></div>
       <div class="row"><div class="field"><label for="weeklyEnergyStart">Počáteční stav výroby FVE (kWh)</label><input id="weeklyEnergyStart" type="number" min="0" step="any" required></div><div class="field"><label for="weeklyEnergy">Nový stav výroby FVE (kWh)</label><input id="weeklyEnergy" type="number" min="0" step="any" required></div></div>
       <div class="row"><div class="field"><label for="weeklyGridStart">Počáteční stav dokupu ze sítě (kWh)</label><input id="weeklyGridStart" type="number" min="0" step="any" required></div><div class="field"><label for="weeklyGrid">Nový stav dokupu ze sítě (kWh)</label><input id="weeklyGrid" type="number" min="0" step="any" required></div></div>
       <div class="field fve-price-field"><label class="price" for="kwPrice">Cena elektřiny pro výpočet úspory FVE (Kč/kWh)<input type="number" id="kwPrice" step="0.1" min="0" inputmode="decimal" value="4.5"></label><p class="hint">Použije se pro orientační výpočet hodnoty vyrobené elektřiny. Cena VT a NT se nastavuje samostatně u měsíčního odečtu elektroměru.</p></div>
       <p class="calc" id="weeklyCalc">Týdenní přírůstky: –</p><button class="btn" type="submit">Uložit týdenní odečet</button><p class="status" id="weeklyStatus" role="status"></p>
-      <h3>Poslední týdenní odečty FVE</h3><div id="weeklyList" class="workflow-list"></div>
+      
     </form>
     <form class="card" id="meterForm" novalidate>
       <div class="workflow-title"><h2>Měsíční odečet elektroměru</h2><svg class="section-art meter" viewBox="0 0 70 68" role="img" aria-label="Elektroměr"><rect x="12" y="3" width="46" height="62" rx="8" fill="#edf3f8" stroke="#9aa8b8" stroke-width="2"/><rect x="19" y="10" width="32" height="19" rx="3" fill="#d6e8d4" stroke="#8a9d8a"/><path d="M23 17h24M23 22h15" stroke="#60745f" stroke-width="2" stroke-linecap="round"/><circle cx="25" cy="39" r="3" fill="#f5a000"/><circle cx="35" cy="39" r="3" fill="#35a66f"/><circle cx="45" cy="39" r="3" fill="#7a8ca1"/><path d="M23 51h24" stroke="#9aa8b8" stroke-width="2" stroke-linecap="round"/><path d="M30 58h10" stroke="#9aa8b8" stroke-width="2" stroke-linecap="round"/></svg></div>
       <p class="hint">Zadávej aktuální stavy VT a NT poslední den v měsíci. Stavy pokračují mezi roky. U prvního záznamu vyplň počáteční stav z počátku sledovaného měsíce, aby se omylem nezapočítala historická spotřeba.</p>
+      <div class="saved-readings"><h3>Uložené odečty elektroměru</h3><div id="meterList" class="workflow-list"></div></div>
       <div class="row"><div class="field"><label for="meterDateDisplay">Datum odečtu</label><div class="date-picker-wrap"><input id="meterDate" class="native-date-value" type="date" tabindex="-1" aria-hidden="true" required><button id="meterDateDisplay" class="date-picker-display" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="meterCalendar"><span id="meterDateDisplayText">Vyber datum</span><span aria-hidden="true">▦</span></button><div id="meterCalendar" class="week-calendar" role="dialog" aria-label="Výběr data s čísly týdnů" hidden><div class="week-calendar-head"><button id="meterCalendarPrev" class="calendar-nav" type="button" aria-label="Předchozí měsíc">‹</button><div id="meterCalendarTitle" class="week-calendar-title"></div><button id="meterCalendarNext" class="calendar-nav" type="button" aria-label="Následující měsíc">›</button></div><div id="meterCalendarGrid" class="week-calendar-grid"></div><div class="calendar-week-caption">Čísla vlevo jsou ISO týdny (pondělí–neděle).</div></div></div></div></div>
       <div class="row"><div class="field"><label for="meterStartVT">Počáteční stav VT (kWh)</label><input id="meterStartVT" type="number" min="0" step="any" required></div><div class="field"><label for="meterVT">Nový stav VT (kWh)</label><input id="meterVT" type="number" min="0" step="any" required></div></div>
       <div class="row"><div class="field"><label for="meterStartNT">Počáteční stav NT (kWh)</label><input id="meterStartNT" type="number" min="0" step="any" required></div><div class="field"><label for="meterNT">Nový stav NT (kWh)</label><input id="meterNT" type="number" min="0" step="any" required></div></div>
@@ -537,7 +585,7 @@ details[open] summary { margin-bottom: 10px; }
         <div class="row"><div class="field"><label for="newVT">Nový elektroměr – počáteční VT</label><input id="newVT" type="number" min="0" step="any"></div><div class="field"><label for="newNT">Nový elektroměr – počáteční NT</label><input id="newNT" type="number" min="0" step="any"></div></div>
       </div>
       <p class="calc" id="meterCalc">Měsíční spotřeba a náklady: –</p><button class="btn" type="submit">Uložit měsíční odečet</button><p class="status" id="meterStatus" role="status"></p>
-      <h3>Měsíční přehled elektroměru</h3><div id="meterList" class="workflow-list"></div>
+      
     </form>
   </div>
 </section>
