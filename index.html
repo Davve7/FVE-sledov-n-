@@ -555,6 +555,36 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 </style>
 
+
+<style>
+/* Oprava výběru data na PC: datum musí být vidět i po výběru v kalendáři. */
+.date-picker-display,
+.workflow .date-picker-display {
+  color: #1b2330 !important;
+  -webkit-text-fill-color: #1b2330 !important;
+  background: #fffaf0 !important;
+  opacity: 1 !important;
+}
+.date-picker-display span:first-child {
+  display: inline-block !important;
+  min-height: 1em;
+  color: #1b2330 !important;
+  -webkit-text-fill-color: #1b2330 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+.date-picker-display span:first-child:empty::before {
+  content: "Vyber datum";
+  color: #667085;
+}
+.week-calendar { z-index: 9999 !important; }
+.week-calendar .calendar-day { color: #1b2330 !important; }
+.week-calendar .calendar-day.selected {
+  color: #1b2330 !important;
+  background: #f5a000 !important;
+}
+</style>
+
 </head>
 <body>
 
@@ -1120,6 +1150,40 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     document.addEventListener('click',function(e){if(!popup.hidden&&!popup.contains(e.target)&&!display.contains(e.target)){popup.hidden=true;display.setAttribute('aria-expanded','false');}});
     valueInput.addEventListener('change',syncLabel);syncLabel();
     window.__syncWeeklyCalendarLabel=syncLabel;
+  })();
+
+
+  // Desktop fallback: delegated click handler ensures date is committed visibly.
+  (function reinforceCalendarSelection(){
+    function bind(gridId, inputId, displayTextId, popupId, displayId, isWeekly){
+      var grid=$(gridId), input=$(inputId), label=$(displayTextId), popup=$(popupId), display=$(displayId);
+      if(!grid||!input||!label||!popup||!display)return;
+      grid.addEventListener('click',function(ev){
+        var day=ev.target.closest ? ev.target.closest('button.calendar-day') : null;
+        if(!day)return;
+        // Let the original handler run first, then restore the visible label.
+        window.setTimeout(function(){
+          if(input.value){
+            var parts=input.value.split('-').map(Number);
+            var d=new Date(parts[0],parts[1]-1,parts[2],12);
+            label.textContent=d.toLocaleDateString('cs-CZ',{day:'2-digit',month:'2-digit',year:'numeric'});
+            label.style.color='#1b2330';
+            label.style.webkitTextFillColor='#1b2330';
+            popup.hidden=true;
+            display.setAttribute('aria-expanded','false');
+            if(isWeekly && typeof updateWeeklyIsoWeek==='function') updateWeeklyIsoWeek();
+          }
+        },0);
+      });
+      input.addEventListener('input',function(){
+        if(input.value){
+          var p=input.value.split('-').map(Number),d=new Date(p[0],p[1]-1,p[2],12);
+          label.textContent=d.toLocaleDateString('cs-CZ',{day:'2-digit',month:'2-digit',year:'numeric'});
+        }
+      });
+    }
+    bind('weekCalendarGrid','weeklyDate','weeklyDateDisplayText','weeklyCalendar','weeklyDateDisplay',true);
+    bind('meterCalendarGrid','meterDate','meterDateDisplayText','meterCalendar','meterDateDisplay',false);
   })();
 
   // Custom date picker for meter readings, matching the weekly FVE calendar.
