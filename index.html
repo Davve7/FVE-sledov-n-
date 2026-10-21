@@ -615,6 +615,51 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .week-calendar-grid button.calendar-day.today { border-color:#f5a000 !important; }
 </style>
 
+<style>
+.roi-card{margin:18px 0;padding:22px;border:1px solid var(--border,#d9dee7);border-radius:22px;background:linear-gradient(135deg,#fff9e9,#f2f7ff);box-shadow:0 8px 24px #1720330b}.roi-card h2{margin:0 0 8px}.roi-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.roi-metric{background:#ffffffd9;border:1px solid #e4e8ef;border-radius:15px;padding:14px}.roi-metric small{display:block;color:#667085;font-weight:700;margin-bottom:6px}.roi-metric strong{font-size:clamp(18px,2vw,27px);color:#183b63}.roi-progress{height:12px;background:#e4eaf1;border-radius:99px;overflow:hidden;margin:14px 0 8px}.roi-progress span{display:block;height:100%;width:0;background:linear-gradient(90deg,#f5a000,#31a66a);transition:width .2s}.ocr-tools{padding:12px;margin:12px 0;border:1px dashed #9ca9ba;border-radius:14px}.ocr-tools button{margin:6px 8px 6px 0}.ocr-tools input[type=file]{max-width:100%}.ocr-preview{max-width:220px;max-height:160px;display:block;margin:8px 0;border-radius:10px}.ocr-status{font-size:.92em;color:var(--muted,#667085)}@media(max-width:520px){.roi-grid{grid-template-columns:1fr}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+<style>
+.ocr-raw-details { margin-top:10px; }
+.ocr-raw-details summary { cursor:pointer; font-weight:700; font-size:13px; }
+.ocr-raw-details pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:180px; overflow:auto; padding:10px; border-radius:10px; background:var(--sunk); border:1px solid var(--line); font-size:12px; }
+.week-calendar { z-index:9999 !important; background:#172235 !important; color:#f8fafc !important; overflow:visible !important; }
+.week-calendar-grid { display:grid !important; grid-template-columns:32px repeat(7,minmax(30px,1fr)) !important; grid-auto-rows:minmax(34px,auto) !important; align-items:stretch !important; gap:3px !important; }
+.week-calendar-grid .calendar-week-head,.week-calendar-grid .calendar-week-number { display:flex !important; visibility:visible !important; opacity:1 !important; min-height:30px !important; color:#f8fafc !important; }
+.week-calendar-grid button.calendar-day { display:flex !important; align-items:center !important; justify-content:center !important; visibility:visible !important; opacity:1 !important; min-height:34px !important; width:100% !important; color:#f8fafc !important; -webkit-text-fill-color:#f8fafc !important; background:transparent !important; border:1px solid transparent !important; font-size:13px !important; line-height:1.2 !important; position:relative !important; }
+.week-calendar-grid button.calendar-day.outside { color:#aab4c4 !important; -webkit-text-fill-color:#aab4c4 !important; opacity:.8 !important; }
+.week-calendar-grid button.calendar-day.selected { background:#f5a000 !important; color:#172235 !important; -webkit-text-fill-color:#172235 !important; }
+.week-calendar-grid button.calendar-day.today { border-color:#f5a000 !important; }
+.roi-card { width:100%; }
+@media(max-width:720px){.roi-card{padding:18px}}
+@media(max-width:520px){.roi-grid{grid-template-columns:1fr}}
+</style>
+
+
+<style id="final-calendar-contrast-fix">
+/* ISO week-number cells must remain readable with the dark custom calendar
+   regardless of the page's light/dark theme. */
+.week-calendar-grid .calendar-week-number {
+  background: #243249 !important;
+  color: #f8fafc !important;
+  -webkit-text-fill-color: #f8fafc !important;
+  border: 1px solid #34445e !important;
+  border-radius: 8px !important;
+  min-height: 34px !important;
+}
+.week-calendar-grid .calendar-week-head {
+  background: transparent !important;
+  color: #f8fafc !important;
+  -webkit-text-fill-color: #f8fafc !important;
+}
+.week-calendar-grid button.calendar-day:not(.selected) {
+  background: transparent !important;
+  color: #f8fafc !important;
+  -webkit-text-fill-color: #f8fafc !important;
+}
+</style>
+
 </head>
 <body>
 
@@ -645,6 +690,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 
 <section class="workflow" aria-label="Nová evidence odečtů">
+
+
   <div class="workflow-grid">
     <form class="card" id="weeklyForm" novalidate>
       <div class="workflow-title"><h2>Týdenní odečet FVE</h2><svg class="section-art" viewBox="0 0 88 68" role="img" aria-label="Slunce a solární panel"><defs><linearGradient id="panelGlow" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#244c83"/><stop offset="1" stop-color="#102746"/></linearGradient></defs><g stroke="#f5a000" stroke-width="3.5" stroke-linecap="round"><path d="M20 4v6M20 30v6M5 20h6M29 20h6M9 9l4 4M27 27l4 4M9 31l4-4M27 13l4-4"/></g><circle cx="20" cy="20" r="9" fill="#ffb51b"/><path d="M34 37L76 37L84 59L27 59Z" fill="url(#panelGlow)" stroke="#6e9ac8" stroke-width="2"/><path d="M44 38L40 59M56 38L56 59M68 38L72 59M30 48H80" stroke="#77a8df" stroke-width="1.5"/><path d="M23 63H85" stroke="#8a98a8" stroke-width="3" stroke-linecap="round"/></svg></div>
@@ -669,6 +716,18 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       <div id="replaceFields" class="replace-box" hidden><p class="hint">Zadej konečné stavy starého elektroměru a počáteční stavy nového. Spotřeba se sečte z obou zařízení.</p>
         <div class="row"><div class="field"><label for="oldVT">Starý elektroměr – konečný VT</label><input id="oldVT" type="number" min="0" step="any"></div><div class="field"><label for="oldNT">Starý elektroměr – konečný NT</label><input id="oldNT" type="number" min="0" step="any"></div></div>
         <div class="row"><div class="field"><label for="newVT">Nový elektroměr – počáteční VT</label><input id="newVT" type="number" min="0" step="any"></div><div class="field"><label for="newNT">Nový elektroměr – počáteční NT</label><input id="newNT" type="number" min="0" step="any"></div></div>
+      </div>
+      <div class="ocr-tools">
+        <strong>📷 Vyfotit / načíst elektroměr</strong>
+        <p class="hint">Vyber fotku nebo pořiď snímek displeje. OCR se pokusí rozpoznat čísla; výsledek vždy zkontroluj.</p>
+        <input id="meterPhoto" type="file" accept="image/*" capture="environment" aria-label="Fotografie elektroměru">
+        <img id="meterPhotoPreview" class="ocr-preview" alt="Náhled fotografie elektroměru" hidden>
+        <div><button type="button" class="mini" id="ocrToVT">Použít číslo jako nový stav VT</button><button type="button" class="mini" id="ocrToNT">Použít číslo jako nový stav NT</button></div>
+        <p class="ocr-status" id="ocrStatus" role="status">Fotku můžeš načíst po výběru souboru.</p>
+        <div class="field" id="ocrCandidatesWrap" hidden><label for="ocrCandidates">Další čísla přečtená z fotky</label><select id="ocrCandidates"></select><p class="hint">Vyber kandidáta, který odpovídá číselníku. OCR může zachytit i výrobní číslo.</p></div>
+        <label for="ocrValue">Návrh hodnoty (kWh) – před vložením zkontroluj</label><input id="ocrValue" type="number" min="0" step="any" inputmode="decimal" placeholder="Rozpoznaná čísla">
+        <details class="ocr-raw-details"><summary>Text rozpoznaný z fotografie</summary><pre id="ocrRawText">Zatím nebyla načtena fotografie.</pre></details>
+        <p class="hint">Fotografie se touto funkcí neukládá do historie ani do Firebase. Rozpoznání probíhá v prohlížeči; knihovna OCR se načítá z internetu.</p>
       </div>
       <p class="calc" id="meterCalc">Měsíční spotřeba a náklady: –</p><button class="btn" type="submit">Uložit měsíční odečet</button><p class="status" id="meterStatus" role="status"></p>
       
@@ -836,6 +895,20 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   </div>
 </div>
 
+
+<!-- Sekce návratnosti investice přesunuta na konec aplikace -->
+<section class="roi-card" aria-labelledby="roiTitle">
+    <h2 id="roiTitle">📈 Návratnost investice do FVE</h2>
+    <p class="hint">Zadej cenu FVE po odečtení dotace. Odhad vychází z evidovaných úspor; nezahrnuje servis, financování ani změny cen elektřiny.</p>
+    <div class="field"><label for="roiInvestment">Pořizovací cena FVE po dotaci (Kč)</label><input id="roiInvestment" type="number" min="0" step="1000" inputmode="decimal" placeholder="Např. 180000"></div>
+    <div class="roi-grid" style="margin-top:12px">
+      <div class="roi-metric"><small>Kumulovaná evidovaná úspora</small><strong id="roiSaved">0 Kč</strong></div>
+      <div class="roi-metric"><small>Zbývá do návratnosti</small><strong id="roiRemaining">—</strong></div>
+      <div class="roi-metric"><small>Vráceno z investice</small><strong id="roiPercent">—</strong></div>
+      <div class="roi-metric"><small>Orientační návratnost</small><strong id="roiTime">—</strong></div>
+    </div>
+    <div class="roi-progress"><span id="roiProgress"></span></div><p class="hint" id="roiNote">Vyplň cenu FVE a eviduj úspory, aby se návratnost dala odhadnout.</p>
+  </section>
 <script>
 (function () {
   var MN = ['Leden','Únor','Březen','Duben','Květen','Červen','Červenec','Srpen','Září','Říjen','Listopad','Prosinec'];
@@ -975,7 +1048,49 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     $('sGridK').textContent = 'Náklady: ' + f1(tC) + ' Kč';
     $('sCon').textContent = f1(con) + ' kWh';
     $('sShare').textContent = 'Podíl FVE: ' + Math.round(pct) + ' %';
+    updateROI(tS);
   }
+  function historyYearsForSavings(){
+    var years={};
+    V().forEach(function(x){years[Number(x.year)]=true;});
+    if(typeof weeklyReadings!=='undefined'&&Array.isArray(weeklyReadings)) sortedByDate(weeklyReadings).forEach(function(x){years[Number(x.date.slice(0,4))]=true;});
+    return Object.keys(years).map(Number).filter(function(y){return y>=1990&&y<=2100;}).sort(function(a,b){return a-b;});
+  }
+  function combinedHistorySavings(){
+    return historyYearsForSavings().reduce(function(sum,year){return sum+combinedYearTotals(year).s;},0);
+  }
+  function latestCompleteAnnualSavings(){
+    var years=historyYearsForSavings().sort(function(a,b){return b-a;});
+    for(var i=0;i<years.length;i++){
+      var total=combinedYearTotals(years[i]);
+      // A projection is shown only where all 12 months have records; a partial current year
+      // must not be mistaken for a full annual saving.
+      if(total.n===12)return {year:years[i],savings:total.s};
+    }
+    return null;
+  }
+  function updateROI(saved){
+    var investment=Number($('roiInvestment').value||0), total=Math.max(0,Number.isFinite(Number(saved))?Number(saved):combinedHistorySavings()), remaining=Math.max(0,investment-total), pct=investment>0?Math.min(100,total/investment*100):0;
+    $('roiSaved').textContent=fmtMoney(total);
+    $('roiRemaining').textContent=investment>0?fmtMoney(remaining):'Zadej investici';
+    $('roiPercent').textContent=investment>0?Math.round(pct)+' %':'—';
+    $('roiProgress').style.width=pct+'%';
+    var annualInfo=latestCompleteAnnualSavings(), annual=annualInfo?annualInfo.savings:0;
+    if(investment<=0){$('roiTime').textContent='—';$('roiNote').textContent='Vyplň cenu FVE a eviduj úspory, aby se návratnost dala odhadnout.';}
+    else if(total>=investment){$('roiTime').textContent='Investice pokryta';$('roiNote').textContent='Kumulovaná evidovaná úspora dosáhla zadané investice. Jde o orientační výpočet.';}
+    else if(annual>0){$('roiTime').textContent='cca '+(remaining/annual).toLocaleString('cs-CZ',{maximumFractionDigits:1})+' roku';$('roiNote').textContent='Odhad vychází z posledního roku s evidencí ve všech 12 měsících ('+annualInfo.year+', '+fmtMoney(annual)+'). Nezahrnuje servis, financování ani změny cen.';}
+    else{$('roiTime').textContent='Zatím nelze odhadnout';$('roiNote').textContent=annualInfo?'V posledním kompletně sledovaném roce ('+annualInfo.year+') nebyla zaznamenána kladná úspora. Zkontroluj ceny a odečty.':'Pro odhad roční úspory je nejprve potřeba evidence ve všech 12 měsících alespoň jednoho roku.';}
+  }
+  $('roiInvestment').addEventListener('input',function(){
+    var raw=String(this.value||'').trim();
+    if(raw!==''&&(!Number.isFinite(Number(raw))||Number(raw)<0)){updateROI(combinedHistorySavings());return;}
+    updateROI(combinedHistorySavings());
+    store.set('fveRoiInvestment',raw);
+    store.set('fveRoiInvestmentUpdatedAt',String(Date.now()));
+    try{scheduleSync();}catch(e){}
+  });
+  try{$('roiInvestment').value=store.get('fveRoiInvestment')||''}catch(e){}
+
 
   function yearsOf(v) {
     var set = {};
@@ -1496,9 +1611,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   $('downloadJson').addEventListener('click', function () {
     var weeks = typeof weeklyReadings !== 'undefined' ? weeklyReadings : [];
     var meters = typeof meterReadings !== 'undefined' ? meterReadings : [];
-    if (!d.length && !weeks.length && !meters.length && !Object.keys(deletions).length) { say('bStatus', 'Zatím není co zálohovat. Nejdřív uložte alespoň jeden odečet.', true); return; }
-    var payload = { data: d, deleted: deletions, cena: prc, priceVT: priceVT, priceNT: priceNT,
-      weeklyReadings: weeks, meterReadings: meters, exportedAt: new Date().toISOString(), format: 'fve-tracker-backup-v2' };
+    var roiInvestmentBackup = store.get('fveRoiInvestment') || '';
+    if (!d.length && !weeks.length && !meters.length && !Object.keys(deletions).length && !roiInvestmentBackup) { say('bStatus', 'Zatím není co zálohovat. Nejdřív uložte alespoň jeden odečet nebo cenu investice.', true); return; }
+    var payload = { data: d, deleted: deletions, cena: prc, priceVT: priceVT, priceNT: priceNT, roiInvestment: roiInvestmentBackup,
+      weeklyReadings: weeks, meterReadings: meters, exportedAt: new Date().toISOString(), format: 'fve-tracker-backup-v3' };
     downloadFile('fve-tracker-zaloha-' + new Date().toISOString().slice(0,10) + '.json', JSON.stringify(payload, null, 2), 'application/json;charset=utf-8');
     say('bStatus', 'Kompletní JSON záloha připravena ke stažení: ' + d.length + ' měsíčních, ' + sortedByDate(weeks).length + ' týdenních a ' + sortedByDate(meters).length + ' elektroměrových odečtů.');
   });
@@ -1519,13 +1635,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   $('copyBackup').addEventListener('click', async function () {
     var weeks = typeof weeklyReadings !== 'undefined' ? weeklyReadings : [];
     var meters = typeof meterReadings !== 'undefined' ? meterReadings : [];
-    if (!d.length && !weeks.length && !meters.length && !Object.keys(deletions).length) { say('bStatus', 'Zatím není co zálohovat. Nejdřív uložte alespoň jeden odečet.', true); return; }
-    ta.value = JSON.stringify({ data: d, deleted: deletions, cena: prc, priceVT: priceVT, priceNT: priceNT,
-      weeklyReadings: weeks, meterReadings: meters, exportedAt: new Date().toISOString(), format: 'fve-tracker-backup-v2' }, null, 2);
+    var roiInvestmentBackup = store.get('fveRoiInvestment') || '';
+    if (!d.length && !weeks.length && !meters.length && !Object.keys(deletions).length && !roiInvestmentBackup) { say('bStatus', 'Zatím není co zálohovat. Nejdřív uložte alespoň jeden odečet nebo cenu investice.', true); return; }
+    ta.value = JSON.stringify({ data: d, deleted: deletions, cena: prc, priceVT: priceVT, priceNT: priceNT, roiInvestment: roiInvestmentBackup,
+      weeklyReadings: weeks, meterReadings: meters, exportedAt: new Date().toISOString(), format: 'fve-tracker-backup-v3' }, null, 2);
     resetImport();
     try {
       await navigator.clipboard.writeText(ta.value);
-      say('bStatus', 'Kompletní záloha je zkopírovaná včetně týdenních a elektroměrových odečtů.');
+      say('bStatus', 'Kompletní záloha je zkopírovaná včetně týdenních odečtů, elektroměru a ceny investice.');
     } catch (e) {
       ta.focus(); ta.select();
       say('bStatus', 'Kompletní záloha je v poli a je označená. Zkopírujte ji ručně.');
@@ -1600,9 +1717,11 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       meters = cleanDatedBackup(o.meterReadings, 'meter'); if (!meters) return null;
     }
     var deleted = (!Array.isArray(o) && o && Object.prototype.hasOwnProperty.call(o,'deleted')) ? cleanDeletions(o.deleted) : null;
-    var any = list.length || (weeks && weeks.length) || (meters && meters.length) || (deleted && Object.keys(deleted).length);
+    var roiInvestment = (!Array.isArray(o) && o && Object.prototype.hasOwnProperty.call(o,'roiInvestment')) ? String(o.roiInvestment == null ? '' : o.roiInvestment).trim() : null;
+    if (roiInvestment !== null && roiInvestment !== '' && (!Number.isFinite(Number(roiInvestment)) || Number(roiInvestment) < 0)) return null;
+    var any = list.length || (weeks && weeks.length) || (meters && meters.length) || (deleted && Object.keys(deleted).length) || (roiInvestment !== null && roiInvestment !== '');
     if (!any) return null;
-    return { list:list, cena:o && parseFloat(o.cena), deleted:deleted,
+    return { list:list, cena:o && parseFloat(o.cena), deleted:deleted, roiInvestment:roiInvestment,
       priceVT:(!Array.isArray(o) && o && Object.prototype.hasOwnProperty.call(o,'priceVT')) ? parseFloat(o.priceVT) : null,
       priceNT:(!Array.isArray(o) && o && Object.prototype.hasOwnProperty.call(o,'priceNT')) ? parseFloat(o.priceNT) : null,
       weeklyReadings:weeks, meterReadings:meters };
@@ -1614,7 +1733,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     if (!pendImp) {
       pendImp = true;
       importBtn.textContent = 'Potvrdit nahrazení';
-      say('bStatus', 'Načtením se nahradí měsíční data (' + res.list.length + ' záznamů)' + (res.weeklyReadings !== null ? ', týdenní odečty (' + res.weeklyReadings.length + ')' : '') + (res.meterReadings !== null ? ', elektroměrové odečty (' + res.meterReadings.length + ')' : '') + '. Potvrďte tlačítkem.', true);
+      say('bStatus', 'Načtením se nahradí měsíční data (' + res.list.length + ' záznamů)' + (res.weeklyReadings !== null ? ', týdenní odečty (' + res.weeklyReadings.length + ')' : '') + (res.meterReadings !== null ? ', elektroměrové odečty (' + res.meterReadings.length + ')' : '') + (res.roiInvestment !== null ? ', nastavení ceny investice do FVE' : '') + '. Potvrďte tlačítkem.', true);
       return;
     }
     d = res.list;
@@ -1625,8 +1744,13 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       delete deletions[key];
     });
     if (isFinite(res.cena) && res.cena >= 0) { prc = res.cena; pI.value = prc.toFixed(1); }
-    if (isFinite(res.priceVT) && res.priceVT >= 0) { priceVT = res.priceVT; store.set('fvePriceVT', String(priceVT)); }
-    if (isFinite(res.priceNT) && res.priceNT >= 0) { priceNT = res.priceNT; store.set('fvePriceNT', String(priceNT)); }
+    if (isFinite(res.priceVT) && res.priceVT >= 0) { priceVT = res.priceVT; store.set('fvePriceVT', String(priceVT)); $('meterPriceVT').value=String(priceVT); }
+    if (isFinite(res.priceNT) && res.priceNT >= 0) { priceNT = res.priceNT; store.set('fvePriceNT', String(priceNT)); $('meterPriceNT').value=String(priceNT); }
+    if (res.roiInvestment !== null) {
+      $('roiInvestment').value = res.roiInvestment;
+      store.set('fveRoiInvestment', res.roiInvestment);
+      store.set('fveRoiInvestmentUpdatedAt', String(Date.now()));
+    }
     if (res.weeklyReadings !== null) {
       weeklyReadings = res.weeklyReadings;
       weeklyReadings.forEach(function (x) { x.updatedAt = Math.max(+x.updatedAt || 0, Date.now()); });
@@ -1822,7 +1946,15 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   function meterDelta(rec){var prior=sortedByDate(meterReadings).filter(function(x){return x.date<rec.date}).slice(-1)[0];var svt=isFinite(rec.startVT)?rec.startVT:(prior?prior.vt:0),snt=isFinite(rec.startNT)?rec.startNT:(prior?prior.nt:0);if(rec.replaced){return {vt:(rec.oldVT-svt)+(rec.vt-rec.newVT),nt:(rec.oldNT-snt)+(rec.nt-rec.newNT),prior:prior}}return {vt:rec.vt-svt,nt:rec.nt-snt,prior:prior}}
   function fmtMoney(n){return n.toLocaleString('cs-CZ',{minimumFractionDigits:2,maximumFractionDigits:2})+' Kč'}
   function persistWorkflow(){store.set('fveWeeklyReadings',JSON.stringify(weeklyReadings));store.set('fveMeterReadings',JSON.stringify(meterReadings));try{scheduleSync()}catch(err){say('syncStatus','Odečet je uložen místně, synchronizace se nepodařila: '+(err.message||'chyba'),true)}}
+  function applyMeterPriceDefaults(){
+    var latest=sortedByDate(meterReadings).slice(-1)[0];
+    var savedVT=latest&&Number.isFinite(Number(latest.priceVT))?Number(latest.priceVT):priceVT;
+    var savedNT=latest&&Number.isFinite(Number(latest.priceNT))?Number(latest.priceNT):priceNT;
+    if(!$('meterPriceVT').value.trim() && savedVT!==null && savedVT!==undefined && savedVT!=='' && Number.isFinite(Number(savedVT)) && Number(savedVT)>=0) $('meterPriceVT').value=String(savedVT);
+    if(!$('meterPriceNT').value.trim() && savedNT!==null && savedNT!==undefined && savedNT!=='' && Number.isFinite(Number(savedNT)) && Number(savedNT)>=0) $('meterPriceNT').value=String(savedNT);
+  }
   function renderWorkflow(){
+    applyMeterPriceDefaults();
     var ws=sortedByDate(weeklyReadings),ms=sortedByDate(meterReadings);
     $('weeklyList').innerHTML=ws.slice().reverse().map(function(x){var q=weeklyDelta(x);return '<div class="workflow-item"><strong>'+dateText(x.date)+'</strong>FVE: '+f1(x.energy)+' kWh (+'+f1(q.energy)+' za období) · Dokup: '+f1(x.grid)+' kWh (+'+f1(q.grid)+')<div class="workflow-actions"><button type="button" data-reading-action="edit-weekly" data-date="'+x.date+'">Upravit</button><button type="button" class="delete" data-reading-action="delete-weekly" data-date="'+x.date+'">Smazat</button></div></div>'}).join('')||'<p class="hint">Zatím žádné týdenní odečty.</p>';
     $('meterList').innerHTML=ms.slice().reverse().map(function(x){var q=meterDelta(x),cost=Math.max(0,q.vt)*x.priceVT+Math.max(0,q.nt)*x.priceNT;return '<div class="workflow-item"><strong>'+dateText(x.date)+(x.replaced?' · výměna elektroměru':'')+'</strong>VT: '+f1(q.vt)+' kWh · NT: '+f1(q.nt)+' kWh · Náklady: '+fmtMoney(cost)+'<div class="workflow-actions"><button type="button" data-reading-action="edit-meter" data-date="'+x.date+'">Upravit</button><button type="button" class="delete" data-reading-action="delete-meter" data-date="'+x.date+'">Smazat</button></div></div>'}).join('')||'<p class="hint">Zatím žádné měsíční odečty.</p>';
@@ -1854,7 +1986,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   $('weeklyDate').value=todayStr;$('meterDate').value=todayStr;if(window.__syncWeeklyCalendarLabel)window.__syncWeeklyCalendarLabel();if(window.__syncMeterCalendarLabel)window.__syncMeterCalendarLabel();suggestStarts();
   function saveWeeklyReading(ev){if(ev){ev.preventDefault();ev.stopPropagation()}var status=$('weeklyStatus');try{var date=$('weeklyDate').value,es=numVal('weeklyEnergyStart'),e=numVal('weeklyEnergy'),gs=numVal('weeklyGridStart'),g=numVal('weeklyGrid'),price=numVal('kwPrice');var movedFrom=editingWeeklyDate&&editingWeeklyDate!==date?editingWeeklyDate:null;var allWeeks=sortedByDate(weeklyReadings).filter(function(x){return !movedFrom||x.date!==movedFrom});if(movedFrom&&allWeeks.some(function(x){return x.date===date})){status.textContent='Na zvolené datum už odečet existuje. Nejprve uprav záznam, který má toto datum.';status.className='status bad';return}var prior=allWeeks.filter(function(x){return x.date<date&&x.date.slice(0,4)===date.slice(0,4)}).slice(-1)[0],next=allWeeks.filter(function(x){return x.date>date&&x.date.slice(0,4)===date.slice(0,4)}).slice(0,1)[0];if(!date||![es,e,gs,g,price].every(function(n){return Number.isFinite(n)&&n>=0})||e<es||g<gs||(prior&&(Math.abs(es-prior.energy)>1e-9||Math.abs(gs-prior.grid)>1e-9))||(next&&(e>next.energy+1e-9||g>next.grid+1e-9))){status.textContent='Zkontroluj datum, cenu a návaznost stavů. Počáteční stav musí navazovat na předchozí odečet a konečný stav nesmí překročit pozdější odečet.';status.className='status bad';return}var stamp=Date.now(),oldYear=null,oldBaseline=null;if(movedFrom){var oldIdx=weeklyReadings.findIndex(function(x){return x.date===movedFrom&&!x._deleted});if(oldIdx>=0){var oldRec=Object.assign({},weeklyReadings[oldIdx]),oldPrev=sortedByDate(weeklyReadings).filter(function(x){return x.date<movedFrom&&x.date.slice(0,4)===movedFrom.slice(0,4)}).slice(-1)[0];oldYear=movedFrom.slice(0,4);if(!oldPrev)oldBaseline={energyStart:oldRec.energyStart,gridStart:oldRec.gridStart};weeklyReadings[oldIdx]={date:movedFrom,_deleted:true,updatedAt:stamp};}}var rec={date:date,energyStart:es,energy:e,gridStart:gs,grid:g,price:price,updatedAt:stamp};var same=weeklyReadings.findIndex(function(x){return x.date===date});if(same>=0)weeklyReadings[same]=rec;else weeklyReadings.push(rec);reconcileWeeklyStarts(date.slice(0,4));if(oldYear&&oldYear!==date.slice(0,4))reconcileWeeklyStarts(oldYear,oldBaseline);else if(oldBaseline)reconcileWeeklyStarts(date.slice(0,4),oldBaseline);editingWeeklyDate=null;store.set('fveWeeklyReadings',JSON.stringify(weeklyReadings));var active=weeklyReadings.find(function(x){return x.date===date&&!x._deleted}),q=weeklyDelta(active||rec);renderWorkflow();renderWeekCompare();renderMonthCompare();renderYearCompare();status.textContent='Uloženo. Přírůstek: FVE '+f1(q.energy)+' kWh, dokup '+f1(q.grid)+' kWh.'+(storageOk?'':' Pozor: prohlížeč nepovolil místní uložení.');status.className='status';updateWorkflowCalc();try{scheduleSync()}catch(syncErr){say('syncStatus','Odečet je uložen v tomto zařízení; synchronizace se nezdařila: '+(syncErr.message||'chyba'),true)}}catch(err){status.textContent='Odečet se nepodařilo uložit: '+(err&&err.message?err.message:String(err));status.className='status bad';}}
   $('weeklyForm').addEventListener('submit',saveWeeklyReading);
-  function saveMeterReading(ev){if(ev){ev.preventDefault();ev.stopPropagation()}var status=$('meterStatus');try{var date=$('meterDate').value,svt=numVal('meterStartVT'),snt=numVal('meterStartNT'),vt=numVal('meterVT'),nt=numVal('meterNT'),pv=numVal('meterPriceVT'),pn=numVal('meterPriceNT'),rep=$('meterReplace').checked;var movedFrom=editingMeterDate&&editingMeterDate!==date?editingMeterDate:null;var allMeters=sortedByDate(meterReadings).filter(function(x){return !movedFrom||x.date!==movedFrom});if(movedFrom&&allMeters.some(function(x){return x.date===date})){status.textContent='Na zvolené datum už odečet elektroměru existuje. Nejprve uprav záznam, který má toto datum.';status.className='status bad';return}var prior=allMeters.filter(function(x){return x.date<date}).slice(-1)[0],next=allMeters.filter(function(x){return x.date>date}).slice(0,1)[0];if(movedFrom){var oldBeingMoved=meterReadings.find(function(x){return x.date===movedFrom&&!x._deleted});if(oldBeingMoved&&oldBeingMoved.replaced&&allMeters.some(function(x){return x.date>movedFrom})){status.textContent='Datum záznamu s výměnou elektroměru nelze změnit, protože na něj navazují další odečty.';status.className='status bad';return}}var nextVT=next?(next.replaced?next.oldVT:next.vt):null,nextNT=next?(next.replaced?next.oldNT:next.nt):null;if(!date||![svt,snt,vt,nt,pv,pn].every(function(n){return Number.isFinite(n)&&n>=0})||(!rep&&(vt<svt||nt<snt||(prior&&(Math.abs(svt-prior.vt)>1e-9||Math.abs(snt-prior.nt)>1e-9))))||(rep&&prior&&(Math.abs(svt-prior.vt)>1e-9||Math.abs(snt-prior.nt)>1e-9))||(next&&(vt>nextVT+1e-9||nt>nextNT+1e-9))){status.textContent='Zkontroluj počáteční a konečné stavy VT/NT a ceny. Počáteční stavy musí navazovat na předchozí odečet a konečné nesmí překročit pozdější odečet.';status.className='status bad';return}var rec={date:date,startVT:svt,startNT:snt,vt:vt,nt:nt,priceVT:pv,priceNT:pn,replaced:rep,updatedAt:Date.now()};if(rep){rec.oldVT=numVal('oldVT');rec.oldNT=numVal('oldNT');rec.newVT=numVal('newVT');rec.newNT=numVal('newNT');if(![rec.oldVT,rec.oldNT,rec.newVT,rec.newNT].every(function(n){return Number.isFinite(n)&&n>=0})||rec.oldVT<svt||rec.oldNT<snt||vt<rec.newVT||nt<rec.newNT||(prior&&(rec.oldVT<prior.vt-1e-9||rec.oldNT<prior.nt-1e-9))){status.textContent='Při výměně zkontroluj konečné stavy starého elektroměru, počáteční a aktuální stavy nového elektroměru i návaznost na předchozí odečet.';status.className='status bad';return}}var stamp=Date.now(),oldYearBaseline=null,oldIndex=-1;if(movedFrom){oldIndex=meterReadings.findIndex(function(x){return x.date===movedFrom&&!x._deleted});if(oldIndex>=0){var oldRec=Object.assign({},meterReadings[oldIndex]),oldPrev=sortedByDate(meterReadings).filter(function(x){return x.date<movedFrom}).slice(-1)[0];if(!oldPrev)oldYearBaseline={startVT:oldRec.startVT,startNT:oldRec.startNT};meterReadings[oldIndex]={date:movedFrom,_deleted:true,updatedAt:stamp};}}rec.updatedAt=stamp;var same=meterReadings.findIndex(function(x){return x.date===date});if(same>=0)meterReadings[same]=rec;else meterReadings.push(rec);reconcileMeterStarts();if(oldYearBaseline&&movedFrom)reconcileMeterStarts(oldYearBaseline);editingMeterDate=null;store.set('fveMeterReadings',JSON.stringify(meterReadings));var active=meterReadings.find(function(x){return x.date===date&&!x._deleted}),q=meterDelta(active||rec),cost=Math.max(0,q.vt)*pv+Math.max(0,q.nt)*pn;/* Po uložení další záznam nezačínej v režimu výměny: zabrání to nechtěnému dvojímu započtení výměny v dalším měsíci. */$('meterReplace').checked=false;$('replaceFields').hidden=true;['meterStartVT','meterVT','meterStartNT','meterNT','oldVT','oldNT','newVT','newNT'].forEach(function(id){$(id).value=''});renderWorkflow();status.textContent='Uloženo. Spotřeba VT '+f1(q.vt)+' kWh, NT '+f1(q.nt)+' kWh; náklady '+fmtMoney(cost)+'.'+(storageOk?'':' Pozor: prohlížeč nepovolil místní uložení.');status.className='status';updateWorkflowCalc();try{scheduleSync()}catch(syncErr){say('syncStatus','Odečet je uložen v tomto zařízení; synchronizace se nezdařila: '+(syncErr.message||'chyba'),true)}}catch(err){status.textContent='Odečet se nepodařilo uložit: '+(err&&err.message?err.message:String(err));status.className='status bad'}}$('meterForm').addEventListener('submit',saveMeterReading);
+  function saveMeterReading(ev){if(ev){ev.preventDefault();ev.stopPropagation()}var status=$('meterStatus');try{var date=$('meterDate').value,svt=numVal('meterStartVT'),snt=numVal('meterStartNT'),vt=numVal('meterVT'),nt=numVal('meterNT'),pv=numVal('meterPriceVT'),pn=numVal('meterPriceNT'),rep=$('meterReplace').checked;var movedFrom=editingMeterDate&&editingMeterDate!==date?editingMeterDate:null;var allMeters=sortedByDate(meterReadings).filter(function(x){return !movedFrom||x.date!==movedFrom});if(movedFrom&&allMeters.some(function(x){return x.date===date})){status.textContent='Na zvolené datum už odečet elektroměru existuje. Nejprve uprav záznam, který má toto datum.';status.className='status bad';return}var prior=allMeters.filter(function(x){return x.date<date}).slice(-1)[0],next=allMeters.filter(function(x){return x.date>date}).slice(0,1)[0];if(movedFrom){var oldBeingMoved=meterReadings.find(function(x){return x.date===movedFrom&&!x._deleted});if(oldBeingMoved&&oldBeingMoved.replaced&&allMeters.some(function(x){return x.date>movedFrom})){status.textContent='Datum záznamu s výměnou elektroměru nelze změnit, protože na něj navazují další odečty.';status.className='status bad';return}}var nextVT=next?(next.replaced?next.oldVT:next.vt):null,nextNT=next?(next.replaced?next.oldNT:next.nt):null;if(!date||![svt,snt,vt,nt,pv,pn].every(function(n){return Number.isFinite(n)&&n>=0})||(!rep&&(vt<svt||nt<snt||(prior&&(Math.abs(svt-prior.vt)>1e-9||Math.abs(snt-prior.nt)>1e-9))))||(rep&&prior&&(Math.abs(svt-prior.vt)>1e-9||Math.abs(snt-prior.nt)>1e-9))||(next&&(vt>nextVT+1e-9||nt>nextNT+1e-9))){status.textContent='Zkontroluj počáteční a konečné stavy VT/NT a ceny. Počáteční stavy musí navazovat na předchozí odečet a konečné nesmí překročit pozdější odečet.';status.className='status bad';return}var rec={date:date,startVT:svt,startNT:snt,vt:vt,nt:nt,priceVT:pv,priceNT:pn,replaced:rep,updatedAt:Date.now()};if(rep){rec.oldVT=numVal('oldVT');rec.oldNT=numVal('oldNT');rec.newVT=numVal('newVT');rec.newNT=numVal('newNT');if(![rec.oldVT,rec.oldNT,rec.newVT,rec.newNT].every(function(n){return Number.isFinite(n)&&n>=0})||rec.oldVT<svt||rec.oldNT<snt||vt<rec.newVT||nt<rec.newNT||(prior&&(rec.oldVT<prior.vt-1e-9||rec.oldNT<prior.nt-1e-9))){status.textContent='Při výměně zkontroluj konečné stavy starého elektroměru, počáteční a aktuální stavy nového elektroměru i návaznost na předchozí odečet.';status.className='status bad';return}}var stamp=Date.now(),oldYearBaseline=null,oldIndex=-1;if(movedFrom){oldIndex=meterReadings.findIndex(function(x){return x.date===movedFrom&&!x._deleted});if(oldIndex>=0){var oldRec=Object.assign({},meterReadings[oldIndex]),oldPrev=sortedByDate(meterReadings).filter(function(x){return x.date<movedFrom}).slice(-1)[0];if(!oldPrev)oldYearBaseline={startVT:oldRec.startVT,startNT:oldRec.startNT};meterReadings[oldIndex]={date:movedFrom,_deleted:true,updatedAt:stamp};}}rec.updatedAt=stamp;priceVT=pv;priceNT=pn;store.set('fvePriceVT',String(pv));store.set('fvePriceNT',String(pn));var same=meterReadings.findIndex(function(x){return x.date===date});if(same>=0)meterReadings[same]=rec;else meterReadings.push(rec);reconcileMeterStarts();if(oldYearBaseline&&movedFrom)reconcileMeterStarts(oldYearBaseline);editingMeterDate=null;store.set('fveMeterReadings',JSON.stringify(meterReadings));var active=meterReadings.find(function(x){return x.date===date&&!x._deleted}),q=meterDelta(active||rec),cost=Math.max(0,q.vt)*pv+Math.max(0,q.nt)*pn;/* Po uložení další záznam nezačínej v režimu výměny: zabrání to nechtěnému dvojímu započtení výměny v dalším měsíci. */$('meterReplace').checked=false;$('replaceFields').hidden=true;['meterStartVT','meterVT','meterStartNT','meterNT','oldVT','oldNT','newVT','newNT'].forEach(function(id){$(id).value=''});renderWorkflow();status.textContent='Uloženo. Spotřeba VT '+f1(q.vt)+' kWh, NT '+f1(q.nt)+' kWh; náklady '+fmtMoney(cost)+'.'+(storageOk?'':' Pozor: prohlížeč nepovolil místní uložení.');status.className='status';updateWorkflowCalc();try{scheduleSync()}catch(syncErr){say('syncStatus','Odečet je uložen v tomto zařízení; synchronizace se nezdařila: '+(syncErr.message||'chyba'),true)}}catch(err){status.textContent='Odečet se nepodařilo uložit: '+(err&&err.message?err.message:String(err));status.className='status bad'}}$('meterForm').addEventListener('submit',saveMeterReading);
   // Include the new collections in the same Firebase user document and merge them by date.
   function mergeDated(local,remote){var map={};(local||[]).concat(remote||[]).forEach(function(x){if(!x||!x.date)return;var old=map[x.date],xt=+x.updatedAt||0,ot=old?(+old.updatedAt||0):-1;if(!old||xt>ot||(xt===ot&&x._deleted===true&&old._deleted!==true))map[x.date]=x});return Object.keys(map).sort().map(function(k){return map[k]})}
   var originalDoSync=doSync;
@@ -1865,7 +1997,36 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     if(!authState&&!(await refreshAuth()))return;
     if(syncing)return;
     syncing=true;if(manual)say('syncStatus','Probíhá synchronizace…');
-    try{var path=cloudPath(cfg),attempt=0,done=false;while(attempt++<6&&!done){var response=await fetch(path+'?auth='+encodeURIComponent(authState.idToken),{cache:'no-store',headers:{'X-Firebase-ETag':'true'}});if(!response.ok)throw new Error('Cloud nelze přečíst (HTTP '+response.status+').');var etag=response.headers.get('ETag'),cloud=await response.json();if(!etag)throw new Error('Firebase neposkytl ETag.');var remoteW=cloud&&cloud.weeklyReadings||[],remoteM=cloud&&cloud.meterReadings||[];store.set('fveLastSyncInfo',JSON.stringify({at:new Date().toISOString(),weekly:remoteW.filter(function(x){return x&&!x._deleted}).length,meter:remoteM.filter(function(x){return x&&!x._deleted}).length}));var mw=mergeDated(weeklyReadings,remoteW),mm=mergeDated(meterReadings,remoteM);var payload=cloud&&typeof cloud==='object'?Object.assign({},cloud):{};payload.weeklyReadings=mw;payload.meterReadings=mm;var changed=JSON.stringify(remoteW)!==JSON.stringify(mw)||JSON.stringify(remoteM)!==JSON.stringify(mm);if(changed){var put=await fetch(path+'?auth='+encodeURIComponent(authState.idToken),{method:'PUT',headers:{'Content-Type':'application/json','If-Match':etag},body:JSON.stringify(payload)});if(put.status===412)continue;if(!put.ok)throw new Error('Cloud nelze aktualizovat (HTTP '+put.status+').')}weeklyReadings=mw;meterReadings=mm;store.set('fveWeeklyReadings',JSON.stringify(mw));store.set('fveMeterReadings',JSON.stringify(mm));done=true}if(!done)throw new Error('Synchronizaci opakuj.');renderWorkflow();renderWeekCompare();renderMonthCompare();renderYearCompare();if(manual)say('syncStatus','Synchronizováno včetně týdenních a měsíčních odečtů.')}catch(err){say('syncStatus','Synchronizace nových odečtů se nezdařila: '+(err.message||'chyba')+'. Místní data zůstala uložena.',true)}finally{syncing=false}
+    try {
+      var path=cloudPath(cfg),attempt=0,done=false;
+      var localRoi=store.get('fveRoiInvestment'); if(localRoi===null)localRoi='';
+      var localRoiAt=Number(store.get('fveRoiInvestmentUpdatedAt'))||0;
+      if(String(localRoi).trim()!==''&&localRoiAt===0){localRoiAt=Date.now();store.set('fveRoiInvestmentUpdatedAt',String(localRoiAt));}
+      while(attempt++<6&&!done){
+        var response=await fetch(path+'?auth='+encodeURIComponent(authState.idToken),{cache:'no-store',headers:{'X-Firebase-ETag':'true'}});
+        if(!response.ok)throw new Error('Cloud nelze přečíst (HTTP '+response.status+').');
+        var etag=response.headers.get('ETag'),cloud=await response.json(); if(!etag)throw new Error('Firebase neposkytl ETag.');
+        var remoteW=cloud&&cloud.weeklyReadings||[],remoteM=cloud&&cloud.meterReadings||[];
+        store.set('fveLastSyncInfo',JSON.stringify({at:new Date().toISOString(),weekly:remoteW.filter(function(x){return x&&!x._deleted}).length,meter:remoteM.filter(function(x){return x&&!x._deleted}).length}));
+        var mw=mergeDated(weeklyReadings,remoteW),mm=mergeDated(meterReadings,remoteM);
+        var remoteRoi=(cloud&&cloud.roiInvestment!=null)?String(cloud.roiInvestment):'',remoteRoiAt=Number(cloud&&cloud.roiInvestmentUpdatedAt)||0;
+        var mergedRoi,mergedRoiAt;
+        if(localRoiAt>remoteRoiAt){mergedRoi=String(localRoi);mergedRoiAt=localRoiAt;}
+        else if(remoteRoiAt>localRoiAt){mergedRoi=remoteRoi;mergedRoiAt=remoteRoiAt;}
+        else if(localRoiAt>0){mergedRoi=String(localRoi);mergedRoiAt=localRoiAt;}
+        else if(String(localRoi).trim()!==''){mergedRoi=String(localRoi);mergedRoiAt=Date.now();store.set('fveRoiInvestmentUpdatedAt',String(mergedRoiAt));}
+        else {mergedRoi=remoteRoi;mergedRoiAt=remoteRoiAt;}
+        var payload=cloud&&typeof cloud==='object'?Object.assign({},cloud):{};
+        payload.weeklyReadings=mw;payload.meterReadings=mm;payload.roiInvestment=mergedRoi;payload.roiInvestmentUpdatedAt=mergedRoiAt;
+        var changed=JSON.stringify(remoteW)!==JSON.stringify(mw)||JSON.stringify(remoteM)!==JSON.stringify(mm)||remoteRoi!==mergedRoi||remoteRoiAt!==mergedRoiAt;
+        if(changed){var put=await fetch(path+'?auth='+encodeURIComponent(authState.idToken),{method:'PUT',headers:{'Content-Type':'application/json','If-Match':etag},body:JSON.stringify(payload)});if(put.status===412)continue;if(!put.ok)throw new Error('Cloud nelze aktualizovat (HTTP '+put.status+').');}
+        weeklyReadings=mw;meterReadings=mm;store.set('fveWeeklyReadings',JSON.stringify(mw));store.set('fveMeterReadings',JSON.stringify(mm));
+        store.set('fveRoiInvestment',mergedRoi);store.set('fveRoiInvestmentUpdatedAt',String(mergedRoiAt||0));$('roiInvestment').value=mergedRoi;
+        done=true;
+      }
+      if(!done)throw new Error('Synchronizaci opakuj.');
+      renderWorkflow();renderWeekCompare();renderMonthCompare();renderYearCompare();if(manual)say('syncStatus','Synchronizováno včetně odečtů a nastavení návratnosti.');
+    }catch(err){say('syncStatus','Synchronizace nových odečtů se nezdařila: '+(err.message||'chyba')+'. Místní data zůstala uložena.',true)}finally{syncing=false}
   };
   function overviewYears(records, dateField) {
     var years = records.filter(function(r){return !r._deleted && r[dateField];}).map(function(r){return Number(r[dateField].slice(0,4));}).filter(function(y){return y>1900;});
@@ -1925,6 +2086,36 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   $('fveOverviewYear').addEventListener('change',renderFveMonthlyOverview);
   $('fveViewMonth').addEventListener('click',function(){setFveOverviewMode('month')});
   $('fveViewWeek').addEventListener('click',function(){setFveOverviewMode('week')});
+  // OCR helper: only offers candidates; it never saves a reading automatically.
+  (function initMeterOCR(){
+    var file=$('meterPhoto'),preview=$('meterPhotoPreview'),value=$('ocrValue'),status=$('ocrStatus'),rawText=$('ocrRawText'),candidates=$('ocrCandidates'),candidatesWrap=$('ocrCandidatesWrap');
+    if(!file||!preview||!value||!status||!rawText||!candidates||!candidatesWrap)return;
+    var currentObjectUrl=null;
+    file.addEventListener('change',async function(){
+      var f=file.files&&file.files[0];if(!f)return;
+      if(currentObjectUrl)URL.revokeObjectURL(currentObjectUrl);
+      currentObjectUrl=URL.createObjectURL(f);preview.src=currentObjectUrl;preview.hidden=false;
+      status.textContent='Načítám OCR a rozpoznávám číslice…';rawText.textContent='Rozpoznávání probíhá…';candidatesWrap.hidden=true;candidates.innerHTML='';value.value='';
+      try{
+        if(!window.Tesseract)throw new Error('Knihovna OCR se nenačetla. Zkontroluj internetové připojení a obnov stránku.');
+        var result=await Tesseract.recognize(f,'eng',{logger:function(m){if(m.status==='recognizing text')status.textContent='Rozpoznávání: '+Math.round((m.progress||0)*100)+' %';}});
+        var recognized=String(result&&result.data&&result.data.text||'').trim();rawText.textContent=recognized||'(OCR nerozpoznalo žádný text)';
+        var tokens=recognized.match(/\d+(?:[.,]\d+)?/g)||[],seen={},list=[];
+        tokens.forEach(function(token){var normalized=token.replace(',','.');if(!seen[normalized]){seen[normalized]=true;list.push(normalized);}});
+        list.sort(function(a,b){return b.replace(/\D/g,'').length-a.replace(/\D/g,'').length;});
+        if(!list.length)throw new Error('Číslo se nepodařilo rozpoznat. Zkus oříznout fotku tak, aby byl vidět jen displej, a pořídit ostřejší snímek.');
+        candidates.innerHTML=list.map(function(v){return '<option value="'+v+'">'+v+'</option>';}).join('');
+        candidatesWrap.hidden=list.length<2;
+        value.value=list[0];
+        status.textContent='Návrh OCR: '+list[0]+' kWh. Před vložením porovnej hodnotu s displejem; OCR může zaměnit odečet za výrobní číslo.';
+      }catch(e){status.textContent='OCR se nepodařilo: '+(e&&e.message?e.message:String(e));if(!rawText.textContent||rawText.textContent==='Rozpoznávání probíhá…')rawText.textContent='Bez výsledku.';}
+    });
+    candidates.addEventListener('change',function(){value.value=this.value;status.textContent='Vybrán kandidát '+this.value+'. Zkontroluj ho proti displeji před vložením.';});
+    value.addEventListener('input',function(){status.textContent='Hodnotu můžeš ručně opravit. Před vložením ji porovnej s displejem.';});
+    $('ocrToVT').addEventListener('click',function(){if(value.value!==''&&Number.isFinite(Number(value.value))&&Number(value.value)>=0){$('meterVT').value=String(Number(value.value));updateWorkflowCalc();status.textContent='Návrh vložen do nového stavu VT. Před uložením ověř datum a číslice.';}});
+    $('ocrToNT').addEventListener('click',function(){if(value.value!==''&&Number.isFinite(Number(value.value))&&Number(value.value)>=0){$('meterNT').value=String(Number(value.value));updateWorkflowCalc();status.textContent='Návrh vložen do nového stavu NT. Před uložením ověř datum a číslice.';}});
+  })();
+
   renderMeterMonthlyOverview();renderFveMonthlyOverview();renderWorkflow();renderWeekCompare();renderMonthCompare();renderYearCompare();updateWorkflowCalc();
 })();
 
@@ -1935,5 +2126,5 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 })();
 </script>
 
+
 </body>
-</html>
