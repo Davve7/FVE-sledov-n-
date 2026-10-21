@@ -281,7 +281,206 @@ details[open] summary { margin-bottom: 10px; }
 </style>
 
 <style>
-.workflow{display:grid;gap:14px;margin-bottom:16px}.workflow-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.workflow .card{min-width:0}.workflow h2{margin-top:0}.workflow .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}.workflow .field{display:grid;gap:4px}.workflow input,.workflow select{width:100%;min-width:0}.workflow-list{font-size:14px}.workflow-item{padding:9px 0;border-top:1px solid var(--line)}.workflow-item strong{display:block}.workflow-actions{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap}.workflow-actions button{font:inherit;font-size:12px;padding:5px 9px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--text);cursor:pointer}.workflow-actions button.delete{color:#b42318;border-color:#e6b8b5}.replace-box{padding:10px;border:1px solid var(--line);border-radius:10px;margin:8px 0}.workflow .btn{margin-top:8px}@media(max-width:720px){.workflow-grid{grid-template-columns:1fr}}
+.workflow{display:grid;gap:14px;margin-bottom:16px}.workflow-title{display:flex;align-items:center;justify-content:space-between;gap:12px}.workflow-title h2{margin:0}.section-art{width:66px;height:54px;flex:0 0 66px;display:block}.section-art.meter{width:58px;flex-basis:58px}.workflow-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.workflow .card{min-width:0}.workflow h2{margin-top:0}.workflow .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}.workflow .field{display:grid;gap:4px}.workflow input,.workflow select{width:100%;min-width:0}.workflow-list{font-size:14px}.workflow-item{padding:9px 0;border-top:1px solid var(--line)}.workflow-item strong{display:block}.workflow-actions{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap}.workflow-actions button{font:inherit;font-size:12px;padding:5px 9px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--text);cursor:pointer}.workflow-actions button.delete{color:#b42318;border-color:#e6b8b5}.replace-box{padding:10px;border:1px solid var(--line);border-radius:10px;margin:8px 0}.workflow .btn{margin-top:8px}@media(max-width:720px){.workflow-grid{grid-template-columns:1fr}}
+</style>
+
+
+<style>
+/* Vizuální úprava formulářů podle referenčního návrhu */
+.workflow { gap: 18px; margin-top: 8px; }
+.workflow-grid { grid-template-columns: 1fr; gap: 18px; }
+.workflow .card {
+  position: relative;
+  overflow: visible;
+  padding: clamp(18px, 4vw, 28px);
+  border-radius: 24px;
+  border: 1px solid #e2e7ef;
+  box-shadow: 0 10px 30px rgba(34, 53, 84, .08);
+}
+.workflow #weeklyForm {
+  background: linear-gradient(145deg, #fffaf0 0%, var(--surface) 48%, #fff 100%);
+}
+.workflow #meterForm {
+  background: linear-gradient(145deg, #eef7ff 0%, var(--surface) 48%, #fff 100%);
+}
+.workflow-title { align-items: center; gap: 16px; margin-bottom: 10px; }
+.workflow-title h2 { font-size: clamp(20px, 5vw, 26px); line-height: 1.15; letter-spacing: -.025em; }
+.section-art {
+  width: 112px; height: 88px; flex: 0 0 112px;
+  padding: 4px; border-radius: 18px;
+  background: radial-gradient(ellipse at center, rgba(255,255,255,.98), rgba(255,255,255,.25) 72%);
+  filter: drop-shadow(0 5px 7px rgba(35,55,80,.13));
+}
+.section-art.meter { width: 104px; height: 96px; flex-basis: 104px; }
+.workflow .hint { font-size: 15px; line-height: 1.55; margin: 8px 0 12px; }
+.workflow label { font-weight: 700; font-size: 14px; line-height: 1.35; }
+.workflow .row { gap: 12px; margin: 12px 0; }
+.workflow .field { gap: 6px; }
+.workflow input:not([type=checkbox]), .workflow select {
+  min-height: 52px; padding: 12px 14px; border-radius: 13px;
+  border-color: #dfe4ec; background: rgba(255,255,255,.88);
+  box-shadow: inset 0 1px 2px rgba(30,45,65,.025);
+}
+.date-picker-wrap { max-width: 100%; }
+.date-picker-display {
+  min-height: 54px; padding: 12px 14px; border-radius: 13px;
+  background: rgba(255,255,255,.9); border-color: #dfe4ec;
+}
+.week-number-note { padding: 9px 12px; border-radius: 12px; font-size: 13px; }
+.workflow .btn {
+  display: block; width: 100%; min-height: 54px; margin-top: 16px;
+  padding: 14px 18px; border-radius: 14px; font-size: 16px;
+  box-shadow: 0 5px 12px rgba(245,158,11,.18);
+  transition: transform .15s ease, filter .15s ease;
+}
+.workflow #meterForm > .btn {
+  background: #1674ed; color: #fff; box-shadow: 0 5px 12px rgba(22,116,237,.18);
+}
+.workflow .btn:hover { filter: brightness(1.025); }
+.workflow .btn:active { transform: translateY(1px); }
+.workflow h3 {
+  margin: 22px 0 10px; font: 800 20px/1.2 var(--f-display);
+  letter-spacing: -.02em;
+}
+.workflow-item {
+  display: grid; grid-template-columns: 46px minmax(0,1fr) auto;
+  align-items: center; gap: 12px; padding: 13px 0;
+  border-top: 1px solid rgba(130,145,165,.22); font-size: 14px; line-height: 1.5;
+}
+.workflow-item::before {
+  content: "▦"; display: flex; align-items: center; justify-content: center;
+  width: 42px; height: 42px; border-radius: 13px;
+  color: #b76b08; background: #fff3d8; font-size: 21px; font-weight: 800;
+  grid-row: 1 / span 2;
+}
+.workflow-item strong { grid-column: 2; align-self: end; font-size: 15px; }
+.workflow-item { color: var(--fg); }
+.workflow-actions { grid-column: 3; grid-row: 1 / span 2; justify-content: flex-end; gap: 6px; margin: 0; }
+.workflow-actions button { padding: 9px 10px; border-radius: 12px; background: rgba(255,255,255,.8); font-size: 12px; min-height: 42px; }
+.workflow-actions button.delete { background: #fff8f8; }
+.workflow .calc { padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.72); }
+.workflow .status { margin: 8px 0; }
+.workflow .replace-box { padding: 14px; border-radius: 14px; background: rgba(255,255,255,.6); border-color: #dfe4ec; }
+.workflow input[type=checkbox] { width: auto; accent-color: #1674ed; }
+@media (max-width: 520px) {
+  .workflow .card { padding: 18px 16px; border-radius: 22px; }
+  .workflow-title { gap: 8px; }
+  .workflow-title h2 { font-size: 21px; }
+  .section-art { width: 88px; height: 74px; flex-basis: 88px; }
+  .section-art.meter { width: 82px; height: 82px; flex-basis: 82px; }
+  .workflow .row { gap: 9px; }
+  .workflow-item { grid-template-columns: 34px minmax(0,1fr); gap: 8px; }
+  .workflow-item::before { width: 32px; height: 36px; font-size: 17px; grid-row: 1 / span 2; }
+  .workflow-item strong { grid-column: 2; }
+  .workflow-actions { grid-column: 2; grid-row: auto; justify-content: flex-start; margin-top: 3px; }
+  .workflow-actions button { min-height: 38px; }
+}
+@media (prefers-color-scheme: dark) {
+  .workflow #weeklyForm, .workflow #meterForm { background: var(--surface); }
+  .workflow-item::before { background: #332918; color: #fbbf24; }
+  .workflow-actions button, .workflow-actions button.delete { background: var(--sunk); }
+}
+</style>
+
+
+<style>
+/* Vizuální sjednocení hlavního přehledu */
+.stats { gap: 12px; }
+.stat {
+  position: relative;
+  min-height: 96px;
+  padding: 18px 20px 18px 76px;
+  border-radius: 20px;
+  border-color: #e0e5ed;
+  box-shadow: 0 5px 18px rgba(35, 50, 75, .055);
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: 5px 14px;
+  overflow: hidden;
+}
+.stat::before {
+  position: absolute;
+  left: 19px; top: 50%; transform: translateY(-50%);
+  display: flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; border-radius: 15px;
+  font-size: 25px; line-height: 1;
+  background: #fff3d6;
+  box-shadow: inset 0 0 0 1px rgba(237,170,46,.12);
+}
+.stats[aria-label="Souhrn za celou historii"] .stat:nth-child(1)::before { content: "☀️"; }
+.stats[aria-label="Souhrn za celou historii"] .stat:nth-child(2)::before { content: "⚡"; background:#edf2f8; }
+.stats[aria-label="Souhrn za celou historii"] .stat:nth-child(3)::before { content: "🔌"; background:#edf4ff; }
+#yearDashboard .stat:nth-child(1)::before { content: "📅"; }
+#yearDashboard .stat:nth-child(2)::before { content: "💰"; background:#eaf7ef; }
+#yearDashboard .stat:nth-child(3)::before { content: "📈"; background:#edf4ff; }
+.stat .k { font-size: 12px; line-height: 1.35; letter-spacing: .075em; }
+.stat .v { font-size: clamp(21px, 5.5vw, 27px); letter-spacing: -.025em; }
+.stat .m { font-size: 14px; line-height: 1.35; }
+#yearDashboard .stat:nth-child(3) { background: linear-gradient(120deg, var(--surface), #f7faff); }
+@media (max-width: 520px) {
+  .stats { gap: 11px; }
+  .stat { min-height: 92px; padding: 15px 14px 15px 62px; grid-template-columns: minmax(0,1fr) auto; gap: 5px 8px; border-radius: 18px; }
+  .stat::before { left: 12px; width: 38px; height: 38px; border-radius: 12px; font-size: 21px; }
+  .stat .k { font-size: 10.5px; letter-spacing: .055em; }
+  .stat .v { font-size: clamp(18px, 5vw, 23px); }
+  .stat .m { font-size: 12.5px; }
+}
+@media (prefers-color-scheme: dark) {
+  .stat { box-shadow: none; }
+  .stat::before { background: #332918; }
+  .stats[aria-label="Souhrn za celou historii"] .stat:nth-child(2)::before,
+  .stats[aria-label="Souhrn za celou historii"] .stat:nth-child(3)::before,
+  #yearDashboard .stat:nth-child(3)::before { background: #202d40; }
+  #yearDashboard .stat:nth-child(2)::before { background:#183729; }
+}
+</style>
+
+
+<style>
+/* Vizuální vylepšení časových přehledů: přehledné karty, výraznější hlavičky a čitelnější grafy */
+.monthly-overviews { gap:22px; }
+.monthly-card { position:relative; overflow:hidden; border:1px solid var(--line); border-radius:22px; background:linear-gradient(145deg,var(--surface) 0%,color-mix(in srgb,var(--surface) 92%,var(--sunk)) 100%); box-shadow:0 10px 30px rgba(28,42,61,.07); }
+.monthly-card:before { content:""; position:absolute; left:0; right:0; top:0; height:5px; background:linear-gradient(90deg,var(--sun),#ffd978); }
+.monthly-card[aria-labelledby="meterOverviewTitle"]:before { background:linear-gradient(90deg,#2477e8,#72b5ff); }
+.monthly-card .chead { align-items:center; margin-top:4px; }
+.monthly-card .chead h2 { display:flex; align-items:center; gap:10px; margin:0; letter-spacing:-.025em; }
+#meterOverviewTitle:before { content:"▤"; display:inline-grid; place-items:center; width:40px; height:40px; border-radius:13px; color:#1767ce; background:#e9f3ff; font-size:24px; }
+#fveOverviewTitle:before { content:"☀"; display:inline-grid; place-items:center; width:40px; height:40px; border-radius:13px; color:#a45a00; background:#fff3d6; font-size:25px; }
+.monthly-card .hint { max-width:720px; }
+.monthly-card .legend { display:flex; flex-wrap:wrap; gap:9px; margin:14px 0 8px; }
+.monthly-card .legend span { padding:6px 10px; border:1px solid var(--line); border-radius:999px; background:var(--surface); font-size:12px; font-weight:700; }
+.monthly-chart { gap:7px; margin-top:12px; }
+.monthly-row { grid-template-columns:92px minmax(0,1fr); padding:10px 11px; border:1px solid transparent; border-radius:12px; transition:background .15s,border-color .15s; }
+.monthly-row:nth-child(even) { background:color-mix(in srgb,var(--sunk) 78%,transparent); }
+.monthly-row:hover { border-color:var(--line); background:var(--surface); }
+.monthly-label { font-size:13px; }
+.monthly-bars { gap:7px; }
+.monthly-bar-line { grid-template-columns:50px minmax(0,1fr) 82px; gap:9px; }
+.monthly-track { height:12px; border:0; background:color-mix(in srgb,var(--line) 65%,transparent); }
+.monthly-fill.sun { background:linear-gradient(90deg,#f59e0b,#ffd166); }
+.monthly-fill.grid { background:linear-gradient(90deg,#64748b,#aab5c4); }
+.monthly-value { font-size:12px; }
+.year-total { margin-top:20px; padding:17px; border-radius:17px; border:1px solid var(--line); background:linear-gradient(135deg,var(--sunk),var(--surface)); }
+.year-total h3 { display:flex; align-items:center; gap:8px; font-size:16px; letter-spacing:-.01em; }
+.year-total-grid > div { border-radius:13px; padding:14px; box-shadow:0 2px 8px rgba(28,42,61,.035); }
+.year-total-grid strong { font-size:clamp(18px,2.3vw,24px); letter-spacing:-.025em; }
+.overview-switch { padding:4px; width:max-content; max-width:100%; border-radius:13px; background:var(--sunk); }
+.overview-switch .btn { border-radius:10px; }
+.overview-switch .btn.active { background:var(--sun); color:var(--on-sun); box-shadow:0 3px 10px rgba(245,158,11,.22); }
+.monthly-card select { border-radius:11px; min-height:40px; }
+@media(max-width:480px) {
+ .monthly-card { padding:17px 14px; border-radius:19px; }
+ .monthly-card .chead { align-items:flex-start; }
+ .monthly-card .chead h2 { font-size:20px; }
+ #meterOverviewTitle:before,#fveOverviewTitle:before { width:35px; height:35px; font-size:21px; flex:0 0 35px; }
+ .monthly-row { grid-template-columns:53px minmax(0,1fr); padding:9px 5px; }
+ .monthly-bar-line { grid-template-columns:30px minmax(0,1fr) 60px; gap:5px; }
+ .monthly-series-label { font-size:10px; }
+ .monthly-value { font-size:10px; }
+ .year-total { padding:13px; }
+ .year-total-grid { gap:8px; }
+ .year-total-grid > div { padding:10px; font-size:12px; }
+ .year-total-grid strong { font-size:17px; }
+}
 </style>
 
 </head>
@@ -316,7 +515,7 @@ details[open] summary { margin-bottom: 10px; }
 <section class="workflow" aria-label="Nová evidence odečtů">
   <div class="workflow-grid">
     <form class="card" id="weeklyForm" novalidate>
-      <h2>Týdenní odečet FVE</h2>
+      <div class="workflow-title"><h2>Týdenní odečet FVE</h2><svg class="section-art" viewBox="0 0 88 68" role="img" aria-label="Slunce a solární panel"><defs><linearGradient id="panelGlow" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#244c83"/><stop offset="1" stop-color="#102746"/></linearGradient></defs><g stroke="#f5a000" stroke-width="3.5" stroke-linecap="round"><path d="M20 4v6M20 30v6M5 20h6M29 20h6M9 9l4 4M27 27l4 4M9 31l4-4M27 13l4-4"/></g><circle cx="20" cy="20" r="9" fill="#ffb51b"/><path d="M34 37L76 37L84 59L27 59Z" fill="url(#panelGlow)" stroke="#6e9ac8" stroke-width="2"/><path d="M44 38L40 59M56 38L56 59M68 38L72 59M30 48H80" stroke="#77a8df" stroke-width="1.5"/><path d="M23 63H85" stroke="#8a98a8" stroke-width="3" stroke-linecap="round"/></svg></div>
       <p class="hint">Každou neděli večer zadej aktuální stavy čítačů FVE: výrobu a dokup ze sítě. Roční přírůstky se počítají samostatně; na začátku nového roku začíná evidence ANTIK od nuly.</p>
       <div class="row"><div class="field"><label for="weeklyDateDisplay">Datum odečtu</label><div class="date-picker-wrap"><input id="weeklyDate" class="native-date-value" type="date" tabindex="-1" aria-hidden="true"><button id="weeklyDateDisplay" class="date-picker-display" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="weeklyCalendar"><span id="weeklyDateDisplayText">Vyber datum</span><span aria-hidden="true">▦</span></button><div id="weeklyCalendar" class="week-calendar" role="dialog" aria-label="Výběr data s čísly týdnů" hidden><div class="week-calendar-head"><button id="calendarPrev" class="calendar-nav" type="button" aria-label="Předchozí měsíc">‹</button><div id="calendarTitle" class="week-calendar-title"></div><button id="calendarNext" class="calendar-nav" type="button" aria-label="Následující měsíc">›</button></div><div id="weekCalendarGrid" class="week-calendar-grid"></div><div class="calendar-week-caption">Čísla vlevo jsou ISO týdny (pondělí–neděle).</div></div></div><span id="weeklyIsoWeek" class="week-number-note" aria-live="polite">Vybraný týden: <strong>–</strong></span></div></div>
       <div class="row"><div class="field"><label for="weeklyEnergyStart">Počáteční stav výroby FVE (kWh)</label><input id="weeklyEnergyStart" type="number" min="0" step="any" required></div><div class="field"><label for="weeklyEnergy">Nový stav výroby FVE (kWh)</label><input id="weeklyEnergy" type="number" min="0" step="any" required></div></div>
@@ -326,7 +525,7 @@ details[open] summary { margin-bottom: 10px; }
       <h3>Poslední týdenní odečty FVE</h3><div id="weeklyList" class="workflow-list"></div>
     </form>
     <form class="card" id="meterForm" novalidate>
-      <h2>Měsíční odečet elektroměru</h2>
+      <div class="workflow-title"><h2>Měsíční odečet elektroměru</h2><svg class="section-art meter" viewBox="0 0 70 68" role="img" aria-label="Elektroměr"><rect x="12" y="3" width="46" height="62" rx="8" fill="#edf3f8" stroke="#9aa8b8" stroke-width="2"/><rect x="19" y="10" width="32" height="19" rx="3" fill="#d6e8d4" stroke="#8a9d8a"/><path d="M23 17h24M23 22h15" stroke="#60745f" stroke-width="2" stroke-linecap="round"/><circle cx="25" cy="39" r="3" fill="#f5a000"/><circle cx="35" cy="39" r="3" fill="#35a66f"/><circle cx="45" cy="39" r="3" fill="#7a8ca1"/><path d="M23 51h24" stroke="#9aa8b8" stroke-width="2" stroke-linecap="round"/><path d="M30 58h10" stroke="#9aa8b8" stroke-width="2" stroke-linecap="round"/></svg></div>
       <p class="hint">Zadávej aktuální stavy VT a NT poslední den v měsíci. Stavy pokračují mezi roky. U prvního záznamu vyplň počáteční stav z počátku sledovaného měsíce, aby se omylem nezapočítala historická spotřeba.</p>
       <div class="row"><div class="field"><label for="meterDateDisplay">Datum odečtu</label><div class="date-picker-wrap"><input id="meterDate" class="native-date-value" type="date" tabindex="-1" aria-hidden="true" required><button id="meterDateDisplay" class="date-picker-display" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="meterCalendar"><span id="meterDateDisplayText">Vyber datum</span><span aria-hidden="true">▦</span></button><div id="meterCalendar" class="week-calendar" role="dialog" aria-label="Výběr data s čísly týdnů" hidden><div class="week-calendar-head"><button id="meterCalendarPrev" class="calendar-nav" type="button" aria-label="Předchozí měsíc">‹</button><div id="meterCalendarTitle" class="week-calendar-title"></div><button id="meterCalendarNext" class="calendar-nav" type="button" aria-label="Následující měsíc">›</button></div><div id="meterCalendarGrid" class="week-calendar-grid"></div><div class="calendar-week-caption">Čísla vlevo jsou ISO týdny (pondělí–neděle).</div></div></div></div></div>
       <div class="row"><div class="field"><label for="meterStartVT">Počáteční stav VT (kWh)</label><input id="meterStartVT" type="number" min="0" step="any" required></div><div class="field"><label for="meterVT">Nový stav VT (kWh)</label><input id="meterVT" type="number" min="0" step="any" required></div></div>
