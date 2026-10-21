@@ -585,6 +585,36 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 </style>
 
+
+<style id="calendar-visibility-fix">
+/* Force every date cell to render visibly in desktop browsers. */
+.week-calendar { background:#172235 !important; color:#f8fafc !important; overflow:visible !important; }
+.week-calendar-grid {
+  display:grid !important;
+  grid-template-columns:32px repeat(7,minmax(30px,1fr)) !important;
+  grid-auto-rows:minmax(34px,auto) !important;
+  align-items:stretch !important;
+  gap:3px !important;
+}
+.week-calendar-grid .calendar-week-head,
+.week-calendar-grid .calendar-week-number {
+  display:flex !important; visibility:visible !important; opacity:1 !important;
+  min-height:30px !important; color:#f8fafc !important;
+}
+.week-calendar-grid button.calendar-day {
+  display:flex !important; align-items:center !important; justify-content:center !important;
+  visibility:visible !important; opacity:1 !important; min-height:34px !important;
+  width:100% !important; color:#f8fafc !important; -webkit-text-fill-color:#f8fafc !important;
+  background:transparent !important; border:1px solid transparent !important;
+  font-size:13px !important; line-height:1.2 !important; position:relative !important;
+}
+.week-calendar-grid button.calendar-day.outside { color:#aab4c4 !important; -webkit-text-fill-color:#aab4c4 !important; opacity:.8 !important; }
+.week-calendar-grid button.calendar-day.selected {
+  background:#f5a000 !important; color:#172235 !important; -webkit-text-fill-color:#172235 !important;
+}
+.week-calendar-grid button.calendar-day.today { border-color:#f5a000 !important; }
+</style>
+
 </head>
 <body>
 
