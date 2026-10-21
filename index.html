@@ -11,7 +11,61 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon-192.png">
-<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}    .fve-price-field { margin: 10px 0 14px; }
+    .fve-price-field .price { display: block; max-width: 340px; font-size: 14px; }
+    .fve-price-field .price input { display: block; width: 100%; margin-top: 6px; }
+
+    /* Starý měsíční vstup a původní přehledy jsou skryté; synchronizace a záloha zůstávají dostupné. */
+    .main { display: grid !important; grid-template-areas: "backup" !important; grid-template-columns: minmax(0,1fr) !important; grid-template-rows: auto !important; }
+    .area-form, .area-results { display: none !important; }
+    .area-backup { display: block !important; grid-area: backup; }
+    .monthly-overviews { display:grid; grid-template-columns:1fr; gap:18px; margin:20px 0; }
+    .monthly-card { padding:clamp(14px,2.5vw,24px); box-shadow:0 8px 24px rgba(0,0,0,.06); }
+    .monthly-card .chead { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+    .monthly-card .chead label { display:flex; align-items:center; gap:8px; font-weight:700; }
+    .overview-switch { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0; }
+    .overview-switch .btn { padding:9px 13px; }
+    .overview-switch .btn.active { box-shadow:0 0 0 2px var(--sun); }
+    .monthly-card select { max-width:130px; }
+    .monthly-chart { display:grid; gap:5px; margin-top:16px; }
+    .monthly-row { display:grid; grid-template-columns:82px minmax(0,1fr); gap:12px; align-items:center; padding:7px 8px; border-bottom:1px solid var(--line); border-radius:8px; }
+    .monthly-row:nth-child(even) { background:var(--sunk); }
+    .monthly-label { font-weight:700; color:var(--fg); font-size:13px; }
+    .monthly-bars { display:grid; gap:6px; min-width:0; }
+    .monthly-bar-line { display:grid; grid-template-columns:58px minmax(0,1fr) 76px; align-items:center; gap:8px; }
+    .monthly-series-label { font-size:11px; font-weight:700; color:var(--muted); }
+    .monthly-track { background:var(--sunk); border:1px solid var(--line); border-radius:999px; height:10px; overflow:hidden; }
+    .monthly-fill { height:100%; min-width:0; border-radius:999px; }
+    .monthly-fill.sun { background:var(--sun); }
+    .monthly-fill.grid { background:var(--grid); }
+    .monthly-value { text-align:right; font-variant-numeric:tabular-nums; font-size:12px; font-weight:700; white-space:nowrap; }
+    .year-total { margin-top:18px; padding:18px; border:1px solid var(--line); border-radius:14px; background:var(--sunk); }
+    .year-total h3 { margin:0 0 14px; font-size:17px; }
+    .year-total-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(145px,1fr)); gap:12px; }
+    .year-total-grid > div { padding:12px; border-radius:10px; background:var(--surface); border:1px solid var(--line); color:var(--muted); font-size:13px; }
+    .year-total-grid strong { display:block; color:var(--fg); font-size:clamp(17px,2vw,22px); margin-top:5px; }
+    .week-number-note { display:inline-flex; align-items:center; gap:6px; width:max-content; max-width:100%; padding:5px 9px; border-radius:8px; background:var(--sunk); border:1px solid var(--line); color:var(--muted); font-size:12px; font-weight:700; }
+    .week-number-note strong { color:var(--sun-ink); }
+    .date-picker-wrap { position:relative; max-width:380px; }
+    .date-picker-display { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; box-sizing:border-box; padding:12px 14px; border:1px solid var(--line); border-radius:10px; background:var(--surface); color:var(--fg); font:inherit; text-align:left; cursor:pointer; }
+    .date-picker-display:focus-visible,.calendar-nav:focus-visible,.calendar-day:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
+    .native-date-value { position:absolute!important; width:1px!important; height:1px!important; opacity:0!important; pointer-events:none!important; overflow:hidden!important; }
+    .week-calendar { position:absolute; z-index:30; top:calc(100% + 6px); left:0; width:min(340px,calc(100vw - 56px)); padding:12px; border:1px solid var(--line); border-radius:14px; background:var(--surface); color:var(--fg); box-shadow:0 14px 38px rgba(0,0,0,.24); }
+    .week-calendar[hidden] { display:none!important; }
+    .week-calendar-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; }
+    .week-calendar-title { font-weight:800; text-transform:capitalize; }
+    .calendar-nav { border:1px solid var(--line); background:var(--sunk); color:var(--fg); border-radius:8px; padding:6px 10px; cursor:pointer; font:inherit; }
+    .week-calendar-grid { display:grid; grid-template-columns:32px repeat(7,minmax(0,1fr)); gap:3px; }
+    .calendar-week-head,.calendar-week-number { display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:11px; font-weight:800; }
+    .calendar-week-number { background:var(--sunk); border-radius:6px; }
+    .calendar-day { min-width:0; padding:8px 0; border:1px solid transparent; border-radius:7px; background:transparent; color:var(--fg); cursor:pointer; font:inherit; font-size:12px; }
+    .calendar-day.outside { color:var(--muted); opacity:.55; }
+    .calendar-day.today { border-color:var(--sun); }
+    .calendar-day.selected { background:var(--sun); color:var(--on-sun); font-weight:800; }
+    .calendar-day:hover { border-color:var(--focus); }
+    .calendar-week-caption { margin-top:9px; color:var(--muted); font-size:11px; }
+    @media (max-width:480px) { .monthly-row { grid-template-columns:58px minmax(0,1fr); gap:7px; padding:7px 4px; } .monthly-bar-line { grid-template-columns:34px minmax(0,1fr) 64px; gap:5px; } .monthly-series-label { font-size:10px; } .monthly-value { font-size:11px; } .year-total-grid { grid-template-columns:1fr 1fr; } }
+  </style>
 <title>FVE Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -220,6 +274,11 @@ details[open] summary { margin-bottom: 10px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
+
+<style>
+.workflow{display:grid;gap:14px;margin-bottom:16px}.workflow-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.workflow .card{min-width:0}.workflow h2{margin-top:0}.workflow .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}.workflow .field{display:grid;gap:4px}.workflow input,.workflow select{width:100%;min-width:0}.workflow-list{font-size:14px}.workflow-item{padding:9px 0;border-top:1px solid var(--line)}.workflow-item strong{display:block}.workflow-actions{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap}.workflow-actions button{font:inherit;font-size:12px;padding:5px 9px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--fg);cursor:pointer}.workflow-actions button.delete{color:var(--cost);border-color:var(--cost)}.replace-box{padding:10px;border:1px solid var(--line);border-radius:10px;margin:8px 0}.workflow .btn{margin-top:8px}@media(max-width:720px){.workflow-grid{grid-template-columns:1fr}}
+</style>
+
 </head>
 <body>
 
@@ -232,9 +291,6 @@ details[open] summary { margin-bottom: 10px; }
       </h1>
       <p class="sub">Ohřev vody: výroba ze slunce a dokup ze sítě</p>
     </div>
-    <label class="price" for="kwPrice">Cena Kč/kWh
-      <input type="number" id="kwPrice" step="0.1" min="0" inputmode="decimal" value="4.5">
-    </label>
   </header>
 
   <div id="notes"></div>
@@ -249,6 +305,56 @@ details[open] summary { margin-bottom: 10px; }
     <div class="stat"><span class="k">Výroba v aktuálním roce</span><span class="v c-sun" id="sYearEnergy">0,0 kWh</span><span class="m" id="sYearMonths">Záznamy: 0 měsíců</span></div>
     <div class="stat"><span class="k">Odhad úspory v aktuálním roce</span><span class="v c-save" id="sYearSavings">0,0 Kč</span><span class="m">Výroba × uložená cena</span></div>
     <div class="stat"><span class="k">Meziroční změna výroby</span><span class="v" id="sYearChange">—</span><span class="m" id="sYearChangeNote">Pro porovnání jsou potřeba data za dva roky</span></div>
+  </section>
+
+
+<section class="workflow" aria-label="Nová evidence odečtů">
+  <div class="workflow-grid">
+    <form class="card" id="weeklyForm" novalidate>
+      <h2>Týdenní odečet FVE</h2>
+      <p class="hint">Každou neděli večer zadej aktuální stavy čítačů FVE: výrobu a dokup ze sítě. Roční přírůstky se počítají samostatně; na začátku nového roku začíná evidence ANTIK od nuly.</p>
+      <div class="row"><div class="field"><label for="weeklyDateDisplay">Datum odečtu</label><div class="date-picker-wrap"><input id="weeklyDate" class="native-date-value" type="date" tabindex="-1" aria-hidden="true"><button id="weeklyDateDisplay" class="date-picker-display" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="weeklyCalendar"><span id="weeklyDateDisplayText">Vyber datum</span><span aria-hidden="true">▦</span></button><div id="weeklyCalendar" class="week-calendar" role="dialog" aria-label="Výběr data s čísly týdnů" hidden><div class="week-calendar-head"><button id="calendarPrev" class="calendar-nav" type="button" aria-label="Předchozí měsíc">‹</button><div id="calendarTitle" class="week-calendar-title"></div><button id="calendarNext" class="calendar-nav" type="button" aria-label="Následující měsíc">›</button></div><div id="weekCalendarGrid" class="week-calendar-grid"></div><div class="calendar-week-caption">Čísla vlevo jsou ISO týdny (pondělí–neděle).</div></div></div><span id="weeklyIsoWeek" class="week-number-note" aria-live="polite">Vybraný týden: <strong>–</strong></span></div></div>
+      <div class="row"><div class="field"><label for="weeklyEnergyStart">Počáteční stav výroby FVE (kWh)</label><input id="weeklyEnergyStart" type="number" min="0" step="any" required></div><div class="field"><label for="weeklyEnergy">Nový stav výroby FVE (kWh)</label><input id="weeklyEnergy" type="number" min="0" step="any" required></div></div>
+      <div class="row"><div class="field"><label for="weeklyGridStart">Počáteční stav dokupu ze sítě (kWh)</label><input id="weeklyGridStart" type="number" min="0" step="any" required></div><div class="field"><label for="weeklyGrid">Nový stav dokupu ze sítě (kWh)</label><input id="weeklyGrid" type="number" min="0" step="any" required></div></div>
+      <div class="field fve-price-field"><label class="price" for="kwPrice">Cena elektřiny pro výpočet úspory FVE (Kč/kWh)<input type="number" id="kwPrice" step="0.1" min="0" inputmode="decimal" value="4.5"></label><p class="hint">Použije se pro orientační výpočet hodnoty vyrobené elektřiny. Cena VT a NT se nastavuje samostatně u měsíčního odečtu elektroměru.</p></div>
+      <div class="field" style="margin-top:10px"><label for="weeklyGridPrice">Cena dokupu ze sítě (Kč/kWh)</label><input id="weeklyGridPrice" type="number" min="0" step="0.01" inputmode="decimal" placeholder="prázdné = cena FVE"><p class="hint">Touto cenou se počítají náklady na dokup. Když pole nevyplníte, použije se cena elektřiny nahoře.</p></div>
+      <p class="calc" id="weeklyCalc">Týdenní přírůstky: –</p><button class="btn" type="submit">Uložit týdenní odečet</button><p class="status" id="weeklyStatus" role="status"></p>
+      <h3>Poslední týdenní odečty FVE</h3><div id="weeklyList" class="workflow-list"></div>
+    </form>
+    <form class="card" id="meterForm" novalidate>
+      <h2>Měsíční odečet elektroměru</h2>
+      <p class="hint">Zadávej aktuální stavy VT a NT poslední den v měsíci. Stavy pokračují mezi roky. U prvního záznamu vyplň počáteční stav z počátku sledovaného měsíce, aby se omylem nezapočítala historická spotřeba.</p>
+      <div class="row"><div class="field"><label for="meterDateDisplay">Datum odečtu</label><div class="date-picker-wrap"><input id="meterDate" class="native-date-value" type="date" tabindex="-1" aria-hidden="true" required><button id="meterDateDisplay" class="date-picker-display" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="meterCalendar"><span id="meterDateDisplayText">Vyber datum</span><span aria-hidden="true">▦</span></button><div id="meterCalendar" class="week-calendar" role="dialog" aria-label="Výběr data s čísly týdnů" hidden><div class="week-calendar-head"><button id="meterCalendarPrev" class="calendar-nav" type="button" aria-label="Předchozí měsíc">‹</button><div id="meterCalendarTitle" class="week-calendar-title"></div><button id="meterCalendarNext" class="calendar-nav" type="button" aria-label="Následující měsíc">›</button></div><div id="meterCalendarGrid" class="week-calendar-grid"></div><div class="calendar-week-caption">Čísla vlevo jsou ISO týdny (pondělí–neděle).</div></div></div></div></div>
+      <div class="row"><div class="field"><label for="meterStartVT">Počáteční stav VT (kWh)</label><input id="meterStartVT" type="number" min="0" step="any" required></div><div class="field"><label for="meterVT">Nový stav VT (kWh)</label><input id="meterVT" type="number" min="0" step="any" required></div></div>
+      <div class="row"><div class="field"><label for="meterStartNT">Počáteční stav NT (kWh)</label><input id="meterStartNT" type="number" min="0" step="any" required></div><div class="field"><label for="meterNT">Nový stav NT (kWh)</label><input id="meterNT" type="number" min="0" step="any" required></div></div>
+      <div class="row"><div class="field"><label for="meterPriceVT">Cena VT (Kč/kWh)</label><input id="meterPriceVT" type="number" min="0" step="0.01" required></div><div class="field"><label for="meterPriceNT">Cena NT (Kč/kWh)</label><input id="meterPriceNT" type="number" min="0" step="0.01" required></div></div>
+      <label><input id="meterReplace" type="checkbox"> V tomto odečtu byl vyměněn elektroměr</label>
+      <div id="replaceFields" class="replace-box" hidden><p class="hint">Zadej konečné stavy starého elektroměru a počáteční stavy nového. Spotřeba se sečte z obou zařízení.</p>
+        <div class="row"><div class="field"><label for="oldVT">Starý elektroměr – konečný VT</label><input id="oldVT" type="number" min="0" step="any"></div><div class="field"><label for="oldNT">Starý elektroměr – konečný NT</label><input id="oldNT" type="number" min="0" step="any"></div></div>
+        <div class="row"><div class="field"><label for="newVT">Nový elektroměr – počáteční VT</label><input id="newVT" type="number" min="0" step="any"></div><div class="field"><label for="newNT">Nový elektroměr – počáteční NT</label><input id="newNT" type="number" min="0" step="any"></div></div>
+      </div>
+      <p class="calc" id="meterCalc">Měsíční spotřeba a náklady: –</p><button class="btn" type="submit">Uložit měsíční odečet</button><p class="status" id="meterStatus" role="status"></p>
+      <h3>Měsíční přehled elektroměru</h3><div id="meterList" class="workflow-list"></div>
+    </form>
+  </div>
+</section>
+
+  <section class="monthly-overviews" aria-label="Měsíční přehledy">
+    <section class="card monthly-card" aria-labelledby="meterOverviewTitle">
+      <div class="chead"><h2 id="meterOverviewTitle">Přehled po měsících</h2><label for="meterOverviewYear">Rok <select id="meterOverviewYear" aria-label="Rok elektroměru"></select></label></div>
+      <p class="hint">Měsíční spotřeba elektroměru rozdělená na vysoký (VT) a nízký tarif (NT). Na konci je součet za vybraný rok.</p>
+      <div class="legend"><span><i style="background:var(--sun)"></i>VT (kWh)</span><span><i style="background:var(--grid)"></i>NT (kWh)</span></div>
+      <div id="meterMonthlyChart" class="monthly-chart"></div>
+      <div id="meterYearTotal" class="year-total"></div>
+    </section>
+    <section class="card monthly-card" aria-labelledby="fveOverviewTitle">
+      <div class="chead"><h2 id="fveOverviewTitle">Přehled FVE</h2><label for="fveOverviewYear">Rok <select id="fveOverviewYear" aria-label="Rok FVE"></select></label></div>
+      <div class="overview-switch" role="group" aria-label="Časové období přehledu FVE"><button type="button" id="fveViewMonth" class="btn active" aria-pressed="true">Měsíční přehled</button><button type="button" id="fveViewWeek" class="btn" aria-pressed="false">Týdenní přehled</button></div>
+      <p class="hint" id="fveOverviewHint">Měsíční výroba FVE a dokup elektřiny ze sítě vypočítané z týdenních odečtů. Na konci je součet za vybraný rok.</p>
+      <div class="legend"><span><i style="background:var(--sun)"></i>Výroba FVE (kWh)</span><span><i style="background:var(--grid)"></i>Dokup ze sítě (kWh)</span></div>
+      <div id="fveMonthlyChart" class="monthly-chart"></div>
+      <div id="fveYearTotal" class="year-total"></div>
+    </section>
   </section>
 
   <div class="main">
@@ -310,15 +416,24 @@ details[open] summary { margin-bottom: 10px; }
         <div id="chart"></div>
       </section>
 
-      <section class="card" aria-labelledby="compareTitle">
-        <h2 id="compareTitle">Porovnání stejného měsíce mezi roky</h2>
-        <div class="compare-controls">
-          <label for="compareYear">Vybraný rok<select id="compareYear"></select></label>
-          <label for="compareMonth">Měsíc<select id="compareMonth">
-            <option value="1">Leden</option><option value="2">Únor</option><option value="3">Březen</option><option value="4">Duben</option><option value="5">Květen</option><option value="6">Červen</option><option value="7">Červenec</option><option value="8">Srpen</option><option value="9">Září</option><option value="10">Říjen</option><option value="11">Listopad</option><option value="12">Prosinec</option>
-          </select></label>
+      <section class="card" aria-labelledby="fveCompareTitle">
+        <h2 id="fveCompareTitle">Srovnání FVE</h2>
+        <p class="hint">Přepni si období, které chceš porovnat mezi aktuálním a předchozím rokem.</p>
+        <div class="tabs" role="tablist" aria-label="Období srovnání FVE">
+          <button type="button" class="tab" id="cmpTabWeek" role="tab" aria-selected="true">Týdny</button>
+          <button type="button" class="tab" id="cmpTabMonth" role="tab" aria-selected="false">Měsíce</button>
+          <button type="button" class="tab" id="cmpTabYear" role="tab" aria-selected="false">Roky</button>
         </div>
-        <div id="monthCompare"></div>
+        <div id="cmpWeekPane" role="tabpanel">
+          <div class="compare-controls"><label for="weekCompareYear">Vybraný rok<select id="weekCompareYear"></select></label><label for="weekCompareWeek">Týden<select id="weekCompareWeek"></select></label></div>
+          <div id="weekCompare"></div>
+        </div>
+        <div id="cmpMonthPane" role="tabpanel" hidden>
+          <div class="compare-controls"><label for="compareYear">Vybraný rok<select id="compareYear"></select></label><label for="compareMonth">Měsíc<select id="compareMonth">
+            <option value="1">Leden</option><option value="2">Únor</option><option value="3">Březen</option><option value="4">Duben</option><option value="5">Květen</option><option value="6">Červen</option><option value="7">Červenec</option><option value="8">Srpen</option><option value="9">Září</option><option value="10">Říjen</option><option value="11">Listopad</option><option value="12">Prosinec</option>
+          </select></label></div><div id="monthCompare"></div>
+        </div>
+        <div id="cmpYearPane" role="tabpanel" hidden><div class="compare-controls"><label for="yearCompareYear">Vybraný rok<select id="yearCompareYear"></select></label></div><div id="yearCompare"></div></div>
       </section>
 
       <section class="card">
@@ -479,15 +594,34 @@ details[open] summary { margin-bottom: 10px; }
   /* ---------- rendering ---------- */
   function renderNotes() {
     var h = '';
-    if (!storageOk) h += '<div class="note"><b>Ukládání je vypnuté.</b> Prohlížeč nepovoluje ukládání dat, záznamy po zavření stránky zmizí. Používejte zálohu níže.</div>';
-    if (!d.length) h += '<div class="note"><b>Zatím žádné záznamy.</b> Po uložení prvního měsíce se zde zobrazí vaše skutečná data.</div>';
+    if (!storageOk) h += '<div class="note"><b>Místní ukládání není dostupné.</b> Prohlížeč nepovoluje ukládání dat; po zavření stránky mohou záznamy zmizet. Používej pravidelně JSON zálohu.</div>';
+    var hasWeekly = typeof weeklyReadings !== 'undefined' && Array.isArray(weeklyReadings) && weeklyReadings.some(function(x){return x && !x._deleted;});
+    var hasMeter = typeof meterReadings !== 'undefined' && Array.isArray(meterReadings) && meterReadings.some(function(x){return x && !x._deleted;});
+    if (!d.length && !hasWeekly && !hasMeter) h += '<div class="note"><b>Zatím žádné odečty.</b> Po uložení prvního týdenního odečtu FVE nebo měsíčního odečtu elektroměru se zde zobrazí tvoje data.</div>';
     $('notes').innerHTML = h;
     $('notes').hidden = !h;
   }
 
   function renderStats() {
-    var v = V(), tE = 0, tG = 0, tS = 0, tC = 0;
-    v.forEach(function (x) { tE += x.energy; tG += x.grid; tS += x.energy * x.savedPrice; tC += gridCost(x); });
+    var v = V(), tE = 0, tG = 0, tS = 0, tC = 0, covered = {};
+    v.forEach(function (x) {
+      var k = x.year + '-' + x.month; covered[k] = true;
+      tE += x.energy; tG += x.grid; tS += x.energy * x.savedPrice; tC += gridCost(x);
+    });
+    // New weekly data powers the active FVE workflow; include it in the top summary
+    // for months that do not already have a legacy monthly record.
+    var ws = (typeof weeklyReadings !== 'undefined' && Array.isArray(weeklyReadings)) ? sortedByDate(weeklyReadings) : [];
+    var years = {};
+    ws.forEach(function (x) { years[Number(x.date.slice(0,4))] = true; });
+    Object.keys(years).forEach(function (ys) {
+      var year = Number(ys);
+      for (var mo = 1; mo <= 12; mo++) {
+        if (covered[year + '-' + mo]) continue;
+        var q = weeklyPeriodTotals(year, mo);
+        if (!q.n) continue;
+        tE += q.e; tG += q.g; tS += q.s; tC += q.c;
+      }
+    });
     var con = tE + tG, pct = con > 0 ? (tE / con) * 100 : 0;
     $('sTot').textContent = f1(tE) + ' kWh';
     $('sTotK').textContent = 'Úspora: ' + f1(tS) + ' Kč';
@@ -504,20 +638,16 @@ details[open] summary { margin-bottom: 10px; }
   }
 
   function renderYearDashboard() {
-    var v = V(), thisYear = cY, prevYear = cY - 1;
-    var current = v.filter(function (x) { return x.year === thisYear; });
-    var previous = v.filter(function (x) { return x.year === prevYear; });
-    var energy = 0, savings = 0, prevEnergy = 0;
-    current.forEach(function (x) { energy += x.energy; savings += x.energy * x.savedPrice; });
-    previous.forEach(function (x) { prevEnergy += x.energy; });
-    $('sYearEnergy').textContent = f1(energy) + ' kWh';
-    $('sYearSavings').textContent = f1(savings) + ' Kč';
-    $('sYearMonths').textContent = 'Záznamy: ' + current.length + ' měsíců';
-    if (current.length && previous.length && prevEnergy > 0) {
-      var change = ((energy - prevEnergy) / prevEnergy) * 100;
+    var thisYear = cY, prevYear = cY - 1;
+    var current = combinedYearTotals(thisYear), previous = combinedYearTotals(prevYear);
+    $('sYearEnergy').textContent = f1(current.e) + ' kWh';
+    $('sYearSavings').textContent = f1(current.s) + ' Kč';
+    $('sYearMonths').textContent = 'Záznamy: ' + current.n + ' ' + (current.n === 1 ? 'měsíc' : current.n < 5 ? 'měsíce' : 'měsíců');
+    if (current.n && previous.n && previous.e > 0) {
+      var change = ((current.e - previous.e) / previous.e) * 100;
       $('sYearChange').textContent = (change > 0 ? '+' : '') + f1(change) + ' %';
       $('sYearChange').className = 'v ' + (change >= 0 ? 'c-save' : 'c-cost');
-      $('sYearChangeNote').textContent = 'Proti roku ' + prevYear + ' (' + f1(prevEnergy) + ' kWh)';
+      $('sYearChangeNote').textContent = 'Proti roku ' + prevYear + ' (' + f1(previous.e) + ' kWh)';
     } else {
       $('sYearChange').textContent = '—';
       $('sYearChange').className = 'v';
@@ -612,57 +742,189 @@ details[open] summary { margin-bottom: 10px; }
     }).join('') : '<p class="empty">Bez dat</p>';
   }
 
+  function weeklyPeriodTotals(year, month) {
+    var rows = (typeof weeklyReadings !== 'undefined' ? sortedByDate(weeklyReadings) : []).filter(function(x) {
+      return Number(x.date.slice(0,4)) === year && (!month || Number(x.date.slice(5,7)) === month);
+    });
+    return rows.reduce(function(o, x) {
+      var q = weeklyDelta(x), price = Number.isFinite(Number(x.price)) ? Number(x.price) : (Number($('kwPrice').value) || 0), gp = (x.gridPrice != null && Number.isFinite(Number(x.gridPrice))) ? Number(x.gridPrice) : price;
+      o.e += Math.max(0,q.energy); o.g += Math.max(0,q.grid); o.s += Math.max(0,q.energy) * price; o.c += Math.max(0,q.grid) * gp; o.n++;
+      return o;
+    }, {e:0,g:0,s:0,c:0,n:0});
+  }
+  // Each calendar month is counted once: prefer a full monthly record; use weekly data only as a fallback.
+  function combinedYearTotals(year) {
+    var total = {e:0,g:0,s:0,n:0};
+    for (var mo=1;mo<=12;mo++) {
+      var rec = V().filter(function(x){return x.year===year && x.month===mo;})[0];
+      if (rec) {
+        total.e += rec.energy; total.g += rec.grid; total.s += rec.energy * rec.savedPrice; total.n++;
+      } else {
+        var weekly = weeklyPeriodTotals(year,mo);
+        if (weekly.n) { total.e += weekly.e; total.g += weekly.g; total.s += weekly.s; total.n++; }
+      }
+    }
+    return total;
+  }
   function renderMonthCompare() {
     var yearSelect = $('compareYear'), monthSelect = $('compareMonth');
     if (!yearSelect || !monthSelect) return;
-    var ys = yearsOf(V());
-    if (ys.indexOf(cY) === -1) ys.unshift(cY);
-    ys.sort(function(a,b){ return b-a; });
+    var legacyYears = yearsOf(V()), weeklyYears = (typeof weeklyReadings !== 'undefined' ? weeklyReadings : []).map(function(x){return Number(x.date.slice(0,4));});
+    var ys = legacyYears.concat(weeklyYears); if (ys.indexOf(cY) < 0) ys.push(cY);
+    ys = ys.filter(function(y,i,a){return a.indexOf(y)===i;}).sort(function(a,b){return b-a;});
     var chosen = Number(yearSelect.value) || cY;
-    yearSelect.innerHTML = ys.map(function(y){ return '<option value="' + y + '">' + y + '</option>'; }).join('');
-    yearSelect.value = String(ys.indexOf(chosen) >= 0 ? chosen : cY);
-    if (!yearSelect.value) yearSelect.value = String(ys[0] || cY);
-    var year = Number(yearSelect.value), month = Number(monthSelect.value) || cM;
-    var current = null, previous = null;
-    V().forEach(function(x){
-      if (x.year === year && x.month === month) current = x;
-      if (x.year === year - 1 && x.month === month) previous = x;
-    });
-    function metric(label, a, b, unit) {
-      if (a === null || b === null) return '<p>' + label + ': <strong>—</strong></p>';
-      return '<p>' + label + ': <strong>' + f1(a) + ' ' + unit + '</strong></p>';
+    yearSelect.innerHTML = ys.map(function(y){return '<option value="'+y+'">'+y+'</option>';}).join('');
+    yearSelect.value = String(ys.indexOf(chosen)>=0 ? chosen : (ys[0]||cY));
+    var year=Number(yearSelect.value), month=Number(monthSelect.value)||cM;
+    function totals(y) {
+      var rec = V().filter(function(x){return x.year===y && x.month===month;})[0];
+      if (rec) return {e:rec.energy,g:rec.grid,s:rec.energy*rec.savedPrice,n:1,legacy:rec};
+      var weekly = weeklyPeriodTotals(y,month);
+      return weekly.n ? weekly : null;
     }
-    function cell(rec, title) {
-      if (!rec) return '<div class="compare-cell"><h3>' + title + '</h3><p>Pro tento měsíc není uložený záznam.</p></div>';
-      return '<div class="compare-cell"><h3>' + title + '</h3>' +
-        metric('Výroba FVE', rec.energy, null, 'kWh') + metric('Dokup ze sítě', rec.grid, null, 'kWh') +
-        metric('Odhad úspory', rec.energy * rec.savedPrice, null, 'Kč') + metric('Náklady na síť', gridCost(rec), null, 'Kč') +
-        '<p>Cena FVE: <strong>' + f1(rec.savedPrice) + ' Kč/kWh</strong></p>' + (rec.priceVT !== undefined && rec.priceNT !== undefined ? '<p>Cena VT/NT: <strong>' + f1(rec.priceVT) + ' / ' + f1(rec.priceNT) + ' Kč/kWh</strong></p>' : '') + '</div>';
+    function cell(y,o) {
+      if(!o) return '<div class="compare-cell"><h3>'+MN[month-1]+' '+y+'</h3><p>Pro tento měsíc není uložený odečet.</p></div>';
+      return '<div class="compare-cell"><h3>'+MN[month-1]+' '+y+'</h3><p>Výroba FVE: <strong>'+f1(o.e)+' kWh</strong></p><p>Dokup ze sítě: <strong>'+f1(o.g)+' kWh</strong></p><p>Odhad úspory: <strong>'+fmtMoney(o.s)+'</strong></p><p>Podklad: '+(o.legacy?'měsíční záznam':'týdenní odečty')+'</p></div>';
     }
-    var result = '';
-    if (current && previous) {
-      function delta(a,b,unit) {
-        if (b === 0) return a === 0 ? '0 %' : 'nelze vypočítat (loni 0)';
-        var pct = (a-b)/b*100;
-        return (pct > 0 ? '+' : '') + f1(pct) + ' % (' + (a-b > 0 ? '+' : '') + f1(a-b) + ' ' + unit + ')';
-      }
-      result = '<div class="compare-result"><b>Změna ' + year + ' oproti ' + (year-1) + ':</b><br>' +
-        'Výroba FVE: <b>' + delta(current.energy, previous.energy, 'kWh') + '</b><br>' +
-        'Dokup ze sítě: <b>' + delta(current.grid, previous.grid, 'kWh') + '</b><br>' +
-        'Náklady na síť: <b>' + delta(gridCost(current), gridCost(previous), 'Kč') + '</b><br>' +
-        'Odhad úspory: <b>' + delta(current.energy*current.savedPrice, previous.energy*previous.savedPrice, 'Kč') + '</b></div>';
-    } else {
-      result = '<p class="hint">Pro výpočet rozdílu je potřeba mít uložený záznam za ' + MN[month-1] + ' ' + year + ' i ' + (year-1) + '.</p>';
-    }
-    $('monthCompare').innerHTML = '<div class="compare-grid">' + cell(current, MN[month-1] + ' ' + year) + cell(previous, MN[month-1] + ' ' + (year-1)) + '</div>' + result;
+    var a=totals(year), b=totals(year-1), result='';
+    if(a&&b){function d(x,y,unit){if(y===0)return x===0?'0 '+unit:'nelze vypočítat (loni 0)';var p=(x-y)/y*100;return (p>0?'+':'')+f1(p)+' % ('+(x-y>0?'+':'')+f1(x-y)+' '+unit+')';}
+      result='<div class="compare-result"><b>Změna '+year+' oproti '+(year-1)+':</b><br>Výroba FVE: <b>'+d(a.e,b.e,'kWh')+'</b><br>Dokup ze sítě: <b>'+d(a.g,b.g,'kWh')+'</b><br>Odhad úspory: <b>'+d(a.s,b.s,'Kč')+'</b></div>';
+    } else result='<p class="hint">Pro meziroční srovnání je potřeba mít odečet za '+MN[month-1]+' v obou letech.</p>';
+    $('monthCompare').innerHTML='<div class="compare-grid">'+cell(year,a)+cell(year-1,b)+'</div>'+result;
   }
 
+  function isoWeekInfo(dateString) {
+    if (typeof dateString !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return null;
+    var parts = dateString.split('-').map(Number);
+    var d = new Date(Date.UTC(parts[0], parts[1]-1, parts[2]));
+    if (!isFinite(d.getTime()) || d.getUTCFullYear() !== parts[0] || d.getUTCMonth() !== parts[1]-1 || d.getUTCDate() !== parts[2]) return null;
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+    var year = d.getUTCFullYear();
+    var jan4 = new Date(Date.UTC(year, 0, 4));
+    jan4.setUTCDate(jan4.getUTCDate() - ((jan4.getUTCDay() + 6) % 7));
+    return {year:year, week:Math.floor((d.getTime() - jan4.getTime()) / 604800000) + 1};
+  }
+  function updateWeeklyIsoWeek() {
+    var el=$('weeklyIsoWeek'), input=$('weeklyDate');
+    if(!el||!input)return;
+    var info=input.value?isoWeekInfo(input.value):null;
+    el.innerHTML='ISO týden: <strong>'+(info?('T'+info.week+' / '+info.year):'–')+'</strong>';
+  }
+  if($('weeklyDate')) { $('weeklyDate').addEventListener('input',updateWeeklyIsoWeek); $('weeklyDate').addEventListener('change',updateWeeklyIsoWeek); updateWeeklyIsoWeek(); }
+
+  // Custom date picker for weekly readings: ISO week numbers are visible in the calendar itself.
+  (function initWeeklyCalendar(){
+    var valueInput=$('weeklyDate'), display=$('weeklyDateDisplay'), displayText=$('weeklyDateDisplayText'), popup=$('weeklyCalendar'), grid=$('weekCalendarGrid'), title=$('calendarTitle');
+    if(!valueInput||!display||!popup||!grid||!title)return;
+    var shown=new Date(); shown.setDate(1);
+    var weekdays=['Po','Út','St','Čt','Pá','So','Ne'];
+    function iso(d){var x=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));x.setUTCDate(x.getUTCDate()+4-(x.getUTCDay()||7));var y=x.getUTCFullYear(),jan4=new Date(Date.UTC(y,0,4)),monday=new Date(jan4);monday.setUTCDate(jan4.getUTCDate()-((jan4.getUTCDay()+6)%7));return {year:y,week:Math.floor((x.getTime()-monday.getTime())/604800000)+1};}
+    function key(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+    function parse(v){if(!v)return null;var a=v.split('-').map(Number);return new Date(a[0],a[1]-1,a[2],12);}
+    function fmt(v){var d=parse(v);return d?d.toLocaleDateString('cs-CZ',{day:'2-digit',month:'2-digit',year:'numeric'}):'Vyber datum';}
+    function syncLabel(){displayText.textContent=fmt(valueInput.value);var info=valueInput.value?iso(parse(valueInput.value)):null;$('weeklyIsoWeek').innerHTML='Vybraný týden: <strong>'+(info?'T'+info.week+' / '+info.year:'–')+'</strong>';}
+    function render(){title.textContent=shown.toLocaleDateString('cs-CZ',{month:'long',year:'numeric'});grid.innerHTML='';weekdays.forEach(function(w){var e=document.createElement('div');e.className='calendar-week-head';e.textContent=w;grid.appendChild(e);});
+      var first=new Date(shown.getFullYear(),shown.getMonth(),1,12), offset=(first.getDay()+6)%7, start=new Date(first);start.setDate(first.getDate()-offset);
+      for(var r=0;r<6;r++){var rowStart=new Date(start);rowStart.setDate(start.getDate()+r*7);var wi=iso(rowStart),wn=document.createElement('div');wn.className='calendar-week-number';wn.textContent=wi.week;wn.title='ISO týden '+wi.week+' / '+wi.year;grid.appendChild(wn);
+        for(var c=0;c<7;c++){var d=new Date(rowStart);d.setDate(rowStart.getDate()+c);var b=document.createElement('button');b.type='button';b.className='calendar-day'+(d.getMonth()!==shown.getMonth()?' outside':'')+(key(d)===valueInput.value?' selected':'')+(key(d)===key(new Date())?' today':'');b.textContent=d.getDate();b.setAttribute('aria-label',d.toLocaleDateString('cs-CZ')+', týden '+iso(d).week);b.addEventListener('click',function(date){return function(){valueInput.value=key(date);valueInput.dispatchEvent(new Event('input',{bubbles:true}));valueInput.dispatchEvent(new Event('change',{bubbles:true}));syncLabel();popup.hidden=true;display.setAttribute('aria-expanded','false');display.focus();};}(d));grid.appendChild(b);}
+      }
+    }
+    display.addEventListener('click',function(){var d=parse(valueInput.value)||new Date();shown=new Date(d.getFullYear(),d.getMonth(),1);render();popup.hidden=!popup.hidden;display.setAttribute('aria-expanded',String(!popup.hidden));});
+    $('calendarPrev').addEventListener('click',function(){shown.setMonth(shown.getMonth()-1);render();});$('calendarNext').addEventListener('click',function(){shown.setMonth(shown.getMonth()+1);render();});
+    document.addEventListener('click',function(e){if(!popup.hidden&&!popup.contains(e.target)&&!display.contains(e.target)){popup.hidden=true;display.setAttribute('aria-expanded','false');}});
+    valueInput.addEventListener('change',syncLabel);syncLabel();
+    window.__syncWeeklyCalendarLabel=syncLabel;
+  })();
+
+  // Custom date picker for meter readings, matching the weekly FVE calendar.
+  (function initMeterCalendar(){
+    var valueInput=$('meterDate'), display=$('meterDateDisplay'), displayText=$('meterDateDisplayText'), popup=$('meterCalendar'), grid=$('meterCalendarGrid'), title=$('meterCalendarTitle');
+    if(!valueInput||!display||!popup||!grid||!title)return;
+    var shown=new Date(); shown.setDate(1);
+    var weekdays=['Po','Út','St','Čt','Pá','So','Ne'];
+    function iso(d){var x=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));x.setUTCDate(x.getUTCDate()+4-(x.getUTCDay()||7));var y=x.getUTCFullYear(),jan4=new Date(Date.UTC(y,0,4)),monday=new Date(jan4);monday.setUTCDate(jan4.getUTCDate()-((jan4.getUTCDay()+6)%7));return {year:y,week:Math.floor((x.getTime()-monday.getTime())/604800000)+1};}
+    function key(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+    function parse(v){if(!v)return null;var a=v.split('-').map(Number);return new Date(a[0],a[1]-1,a[2],12);}
+    function fmt(v){var d=parse(v);return d?d.toLocaleDateString('cs-CZ',{day:'2-digit',month:'2-digit',year:'numeric'}):'Vyber datum';}
+    function syncLabel(){displayText.textContent=fmt(valueInput.value);}
+    function render(){
+      title.textContent=shown.toLocaleDateString('cs-CZ',{month:'long',year:'numeric'});grid.innerHTML='';
+      weekdays.forEach(function(w){var e=document.createElement('div');e.className='calendar-week-head';e.textContent=w;grid.appendChild(e);});
+      var first=new Date(shown.getFullYear(),shown.getMonth(),1,12),offset=(first.getDay()+6)%7,start=new Date(first);start.setDate(first.getDate()-offset);
+      for(var r=0;r<6;r++){var rowStart=new Date(start);rowStart.setDate(start.getDate()+r*7);var wi=iso(rowStart),wn=document.createElement('div');wn.className='calendar-week-number';wn.textContent=wi.week;wn.title='ISO týden '+wi.week+' / '+wi.year;grid.appendChild(wn);
+        for(var c=0;c<7;c++){var d=new Date(rowStart);d.setDate(rowStart.getDate()+c);var b=document.createElement('button');b.type='button';b.className='calendar-day'+(d.getMonth()!==shown.getMonth()?' outside':'')+(key(d)===valueInput.value?' selected':'')+(key(d)===key(new Date())?' today':'');b.textContent=d.getDate();b.setAttribute('aria-label',d.toLocaleDateString('cs-CZ')+', týden '+iso(d).week);
+          b.addEventListener('click',function(date){return function(){valueInput.value=key(date);valueInput.dispatchEvent(new Event('input',{bubbles:true}));valueInput.dispatchEvent(new Event('change',{bubbles:true}));syncLabel();popup.hidden=true;display.setAttribute('aria-expanded','false');display.focus();};}(d));grid.appendChild(b);}
+      }
+    }
+    display.addEventListener('click',function(){var d=parse(valueInput.value)||new Date();shown=new Date(d.getFullYear(),d.getMonth(),1);render();popup.hidden=!popup.hidden;display.setAttribute('aria-expanded',String(!popup.hidden));});
+    $('meterCalendarPrev').addEventListener('click',function(){shown.setMonth(shown.getMonth()-1);render();});
+    $('meterCalendarNext').addEventListener('click',function(){shown.setMonth(shown.getMonth()+1);render();});
+    document.addEventListener('click',function(e){if(!popup.hidden&&!popup.contains(e.target)&&!display.contains(e.target)){popup.hidden=true;display.setAttribute('aria-expanded','false');}});
+    valueInput.addEventListener('change',syncLabel);syncLabel();
+    window.__syncMeterCalendarLabel=syncLabel;
+  })();
+
+  function renderWeekCompare() {
+    var yearSelect=$('weekCompareYear'), weekSelect=$('weekCompareWeek'), target=$('weekCompare');
+    if(!yearSelect||!weekSelect||!target) return;
+    var ws=typeof weeklyReadings!=='undefined' ? sortedByDate(weeklyReadings) : [];
+    var years=[];
+    ws.forEach(function(x){var inf=isoWeekInfo(x.date);if(inf&&years.indexOf(inf.year)<0)years.push(inf.year);});
+    var now=new Date(), currentInfo=isoWeekInfo(now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0'));
+    if(years.indexOf(currentInfo.year)<0)years.push(currentInfo.year);
+    years.sort(function(a,b){return b-a;});
+    var chosen=Number(yearSelect.value)||currentInfo.year;
+    yearSelect.innerHTML=years.map(function(y){return '<option value="'+y+'">'+y+'</option>';}).join('');
+    yearSelect.value=String(years.indexOf(chosen)>=0?chosen:years[0]);
+    var weekNum=Number(weekSelect.value)||currentInfo.week;
+    weekSelect.innerHTML=Array.from({length:53},function(_,i){var w=i+1;return '<option value="'+w+'">Týden '+w+'</option>';}).join('');
+    weekSelect.value=String(weekNum>=1&&weekNum<=53?weekNum:currentInfo.week);
+    var year=Number(yearSelect.value), week=Number(weekSelect.value);
+    function latestFor(y,w){
+      var matches=ws.filter(function(x){var inf=isoWeekInfo(x.date);return inf&&inf.year===y&&inf.week===w;});
+      return matches.length?matches[matches.length-1]:null;
+    }
+    function card(y,rec){
+      if(!rec)return '<div class="compare-cell"><h3>Týden '+week+' · '+y+'</h3><p>Pro tento týden není uložený nedělní odečet.</p></div>';
+      var q=weeklyDelta(rec);
+      return '<div class="compare-cell"><h3>Týden '+week+' · '+y+'</h3><p>Datum odečtu: <strong>'+dateText(rec.date)+'</strong></p><p>Výroba FVE: <strong>'+f1(q.energy)+' kWh</strong></p><p>Dokup ze sítě: <strong>'+f1(q.grid)+' kWh</strong></p></div>';
+    }
+    var a=latestFor(year,week),b=latestFor(year-1,week),result='';
+    if(a&&b){
+      var qa=weeklyDelta(a),qb=weeklyDelta(b);
+      function delta(x,y){if(y===0)return x===0?'0 %':'nelze vypočítat (loni 0)';var p=(x-y)/y*100;return (p>0?'+':'')+f1(p)+' % ('+(x-y>0?'+':'')+f1(x-y)+' kWh)';}
+      result='<div class="compare-result"><b>Změna týdne '+week+', '+year+' oproti '+(year-1)+':</b><br>Výroba FVE: <b>'+delta(qa.energy,qb.energy)+'</b><br>Dokup ze sítě: <b>'+delta(qa.grid,qb.grid)+'</b></div>';
+    }else{
+      result='<p class="hint">Pro výpočet meziroční změny je potřeba mít nedělní odečet za týden '+week+' v letech '+year+' i '+(year-1)+'.</p>';
+    }
+    target.innerHTML='<div class="compare-grid">'+card(year,a)+card(year-1,b)+'</div>'+result;
+  }
+
+  function renderYearCompare() {
+    var sel=$('yearCompareYear'), target=$('yearCompare'); if(!sel||!target)return;
+    var v=V(), ws=(typeof weeklyReadings!=='undefined'?weeklyReadings:[]), ys=yearsOf(v).concat(ws.map(function(x){return Number(x.date.slice(0,4));}));
+    if(ys.indexOf(cY)<0)ys.push(cY); ys=ys.filter(function(y,i,a){return a.indexOf(y)===i;}).sort(function(a,b){return b-a;});
+    var chosen=Number(sel.value)||cY; sel.innerHTML=ys.map(function(y){return '<option value="'+y+'">'+y+'</option>';}).join('');
+    sel.value=String(ys.indexOf(chosen)>=0?chosen:(ys[0]||cY)); var year=Number(sel.value);
+    function totals(y){ return combinedYearTotals(y); }
+    var a=totals(year),b=totals(year-1);
+    function card(y,o){return '<div class="compare-cell"><h3>'+y+'</h3><p>Výroba FVE: <strong>'+f1(o.e)+' kWh</strong></p><p>Dokup ze sítě: <strong>'+f1(o.g)+' kWh</strong></p><p>Odhad úspory: <strong>'+fmtMoney(o.s)+'</strong></p><p>Měsíce s daty: '+o.n+'</p></div>';}
+    var result='';if(a.n&&b.n){function d(x,y,unit){if(!y)return x?'nelze vypočítat (předchozí rok 0)':'0 '+unit;var p=(x-y)/y*100;return (p>0?'+':'')+f1(p)+' % ('+(x-y>0?'+':'')+f1(x-y)+' '+unit+')';}result='<div class="compare-result"><b>Změna '+year+' oproti '+(year-1)+':</b><br>Výroba FVE: <b>'+d(a.e,b.e,'kWh')+'</b><br>Dokup ze sítě: <b>'+d(a.g,b.g,'kWh')+'</b><br>Odhad úspory: <b>'+d(a.s,b.s,'Kč')+'</b></div>';}else result='<p class="hint">Pro srovnání celých roků je potřeba mít odečty v obou letech.</p>';
+    target.innerHTML='<div class="compare-grid">'+card(year,a)+card(year-1,b)+'</div>'+result;
+  }
+  function setCompareMode(mode){['Week','Month','Year'].forEach(function(k){var active=k.toLowerCase()===mode; $('cmpTab'+k).setAttribute('aria-selected',active?'true':'false');$('cmp'+k+'Pane').hidden=!active;});}
+  $('cmpTabWeek').addEventListener('click',function(){setCompareMode('week');renderWeekCompare()});
+  $('cmpTabMonth').addEventListener('click',function(){setCompareMode('month');renderMonthCompare()});
+  $('cmpTabYear').addEventListener('click',function(){setCompareMode('year');renderYearCompare()});
   $('compareYear').addEventListener('change', renderMonthCompare);
+  $('weekCompareYear').addEventListener('change', renderWeekCompare);
+  $('weekCompareWeek').addEventListener('change', renderWeekCompare);
+  $('yearCompareYear').addEventListener('change',renderYearCompare);
   $('compareMonth').value = String(cM);
   $('compareMonth').addEventListener('change', renderMonthCompare);
 
   function render() {
-    renderNotes(); renderStats(); renderYearDashboard(); renderChart(); renderList(); renderYears(); renderMonthCompare();
+    renderNotes(); renderStats(); renderYearDashboard(); renderChart(); renderList(); renderYears(); renderMonthCompare(); renderWeekCompare(); renderYearCompare();
   }
 
   /* ---------- status helper ---------- */
@@ -735,6 +997,15 @@ details[open] summary { margin-bottom: 10px; }
     });
     return best;
   }
+  function nextStart(y, mo, key) {
+    var best = null;
+    d.forEach(function (x) {
+      if (x.year === y && x.month > mo && x[key] !== undefined && isFinite(Number(x[key]))) {
+        if (!best || x.month < best.month) best = x;
+      }
+    });
+    return best;
+  }
 
   function selectNextMonth() {
     var last = null;
@@ -763,6 +1034,10 @@ details[open] summary { margin-bottom: 10px; }
     var prevE = prevEnd(y, mo, 'eEnd'), prevVT = prevEnd(y, mo, 'vtEnd'), prevNT = prevEnd(y, mo, 'ntEnd');
     if ((prevE && es < Number(prevE.eEnd) - 1e-9) || (prevVT && vts < Number(prevVT.vtEnd) - 1e-9) || (prevNT && nts < Number(prevNT.ntEnd) - 1e-9)) {
       say('fStatus', 'Počáteční stav během roku nesmí být nižší než poslední zaznamenaný konečný stav. Ověř také reset elektroměru na začátku roku.', true); return;
+    }
+    var nextE = nextStart(y, mo, 'eStart'), nextVT = nextStart(y, mo, 'vtStart'), nextNT = nextStart(y, mo, 'ntStart');
+    if ((nextE && Number(nextE.eStart) < ee - 1e-9) || (nextVT && Number(nextVT.vtStart) < vte - 1e-9) || (nextNT && Number(nextNT.ntStart) < nte - 1e-9)) {
+      say('fStatus', 'Konečný stav by byl vyšší než počáteční stav některého pozdějšího měsíce. Nejdřív oprav navazující záznam.', true); return;
     }
 
     priceVT = pv; priceNT = pn; store.set('fvePriceVT', String(pv)); store.set('fvePriceNT', String(pn));
@@ -828,33 +1103,41 @@ details[open] summary { margin-bottom: 10px; }
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
   $('downloadJson').addEventListener('click', function () {
-    if (!d.length) { say('bStatus', 'Zatím není co zálohovat. Nejdřív uložte aspoň jeden měsíc.', true); return; }
-    var payload = { data: d, cena: prc, exportedAt: new Date().toISOString(), format: 'fve-tracker-backup-v1' };
+    var weeks = typeof weeklyReadings !== 'undefined' ? weeklyReadings : [];
+    var meters = typeof meterReadings !== 'undefined' ? meterReadings : [];
+    if (!d.length && !weeks.length && !meters.length && !Object.keys(deletions).length) { say('bStatus', 'Zatím není co zálohovat. Nejdřív uložte alespoň jeden odečet.', true); return; }
+    var payload = { data: d, deleted: deletions, cena: prc, priceVT: priceVT, priceNT: priceNT,
+      weeklyReadings: weeks, meterReadings: meters, exportedAt: new Date().toISOString(), format: 'fve-tracker-backup-v2' };
     downloadFile('fve-tracker-zaloha-' + new Date().toISOString().slice(0,10) + '.json', JSON.stringify(payload, null, 2), 'application/json;charset=utf-8');
-    say('bStatus', 'JSON záloha připravena ke stažení (' + d.length + ' záznamů).');
+    say('bStatus', 'Kompletní JSON záloha připravena ke stažení: ' + d.length + ' měsíčních, ' + sortedByDate(weeks).length + ' týdenních a ' + sortedByDate(meters).length + ' elektroměrových odečtů.');
   });
   $('exportCsv').addEventListener('click', function () {
-    if (!d.length) { say('bStatus', 'Zatím není co exportovat. Nejdřív uložte aspoň jeden měsíc.', true); return; }
+    var weeks = typeof weeklyReadings !== 'undefined' ? sortedByDate(weeklyReadings) : [];
+    var meters = typeof meterReadings !== 'undefined' ? sortedByDate(meterReadings) : [];
+    if (!d.length && !weeks.length && !meters.length) { say('bStatus', 'Zatím není co exportovat. Nejdřív ulož alespoň jeden odečet.', true); return; }
     function csvCell(value) { var s = String(value == null ? '' : value); return '"' + s.replace(/"/g, '""') + '"'; }
-    var rows = [['Rok','Měsíc','Výroba FVE (kWh)','Dokup ze sítě (kWh)','Cena FVE (Kč/kWh)','Odhad úspory (Kč)','Náklady na dokup (Kč)','Počáteční FVE stav','Konečný FVE stav','Počáteční stav sítě','Konečný stav sítě','Počáteční VT','Konečný VT','Spotřeba VT (kWh)','Cena VT (Kč/kWh)','Počáteční NT','Konečný NT','Spotřeba NT (kWh)','Cena NT (Kč/kWh)']];
-    d.slice().sort(function (a,b) { return a.year-b.year || a.month-b.month; }).forEach(function (x) {
-      rows.push([x.year, MN[x.month-1], x.energy, x.grid, x.savedPrice, x.energy*x.savedPrice, gridCost(x), x.eStart === undefined ? '' : x.eStart, x.eEnd === undefined ? '' : x.eEnd, x.gStart === undefined ? '' : x.gStart, x.gEnd === undefined ? '' : x.gEnd, x.vtStart === undefined ? '' : x.vtStart, x.vtEnd === undefined ? '' : x.vtEnd, x.vtStart === undefined ? '' : x.vtEnd-x.vtStart, x.priceVT === undefined ? '' : x.priceVT, x.ntStart === undefined ? '' : x.ntStart, x.ntEnd === undefined ? '' : x.ntEnd, x.ntStart === undefined ? '' : x.ntEnd-x.ntStart, x.priceNT === undefined ? '' : x.priceNT]);
-    });
+    var rows = [['Typ záznamu','Datum','Rok','Měsíc','ISO týden','Výroba FVE (kWh)','Dokup ze sítě (kWh)','Cena FVE (Kč/kWh)','Odhad úspory (Kč)','Náklady na dokup (Kč)','Počáteční FVE stav','Konečný FVE stav','Počáteční stav dokupu','Konečný stav dokupu','Počáteční VT','Konečný VT','Spotřeba VT (kWh)','Cena VT (Kč/kWh)','Počáteční NT','Konečný NT','Spotřeba NT (kWh)','Cena NT (Kč/kWh)','Výměna elektroměru']];
+    d.slice().sort(function(a,b){return a.year-b.year||a.month-b.month;}).forEach(function(x){rows.push(['Měsíční FVE',String(x.year)+'-'+String(x.month).padStart(2,'0'),x.year,x.month,'',x.energy,x.grid,x.savedPrice,x.energy*x.savedPrice,gridCost(x),x.eStart===undefined?'':x.eStart,x.eEnd===undefined?'':x.eEnd,x.gStart===undefined?'':x.gStart,x.gEnd===undefined?'':x.gEnd,x.vtStart===undefined?'':x.vtStart,x.vtEnd===undefined?'':x.vtEnd,x.vtStart===undefined||x.vtEnd===undefined?'':x.vtEnd-x.vtStart,x.priceVT===undefined?'':x.priceVT,x.ntStart===undefined?'':x.ntStart,x.ntEnd===undefined?'':x.ntEnd,x.ntStart===undefined||x.ntEnd===undefined?'':x.ntEnd-x.ntStart,x.priceNT===undefined?'':x.priceNT,'']);});
+    weeks.forEach(function(x){var q=weeklyDelta(x),iw=isoWeekInfo(x.date),price=Number.isFinite(Number(x.price))?Number(x.price):4.5,gp=(x.gridPrice!=null&&Number.isFinite(Number(x.gridPrice)))?Number(x.gridPrice):price;rows.push(['Týdenní FVE',x.date,Number(x.date.slice(0,4)),Number(x.date.slice(5,7)),iw?iw.week:'',Math.max(0,q.energy),Math.max(0,q.grid),price,Math.max(0,q.energy)*price,Math.max(0,q.grid)*gp,x.energyStart,x.energy,x.gridStart,x.grid,'','','','','','','','', '']);});
+    meters.forEach(function(x){var q=meterDelta(x),cost=Math.max(0,q.vt)*x.priceVT+Math.max(0,q.nt)*x.priceNT;rows.push(['Elektroměr',x.date,Number(x.date.slice(0,4)),Number(x.date.slice(5,7)),'','','','','',cost,'','','','',x.startVT,x.vt,Math.max(0,q.vt),x.priceVT,x.startNT,x.nt,Math.max(0,q.nt),x.priceNT,x.replaced?'Ano':'Ne']);});
     var csv = '\uFEFF' + rows.map(function (row) { return row.map(csvCell).join(';'); }).join('\r\n');
     downloadFile('fve-tracker-export-' + new Date().toISOString().slice(0,10) + '.csv', csv, 'text/csv;charset=utf-8');
-    say('bStatus', 'CSV export připraven ke stažení (' + d.length + ' záznamů).');
+    say('bStatus', 'CSV export připraven: ' + d.length + ' měsíčních, ' + weeks.length + ' týdenních a ' + meters.length + ' elektroměrových záznamů. JSON záloha navíc uchovává metadata potřebná k obnově.');
   });
 
   $('copyBackup').addEventListener('click', async function () {
-    if (!d.length) { say('bStatus', 'Zatím není co zálohovat. Nejdřív uložte aspoň jeden měsíc.', true); return; }
-    ta.value = JSON.stringify({ data: d, cena: prc });
+    var weeks = typeof weeklyReadings !== 'undefined' ? weeklyReadings : [];
+    var meters = typeof meterReadings !== 'undefined' ? meterReadings : [];
+    if (!d.length && !weeks.length && !meters.length && !Object.keys(deletions).length) { say('bStatus', 'Zatím není co zálohovat. Nejdřív uložte alespoň jeden odečet.', true); return; }
+    ta.value = JSON.stringify({ data: d, deleted: deletions, cena: prc, priceVT: priceVT, priceNT: priceNT,
+      weeklyReadings: weeks, meterReadings: meters, exportedAt: new Date().toISOString(), format: 'fve-tracker-backup-v2' }, null, 2);
     resetImport();
     try {
       await navigator.clipboard.writeText(ta.value);
-      say('bStatus', 'Záloha je zkopírovaná (' + d.length + ' záznamů).');
+      say('bStatus', 'Kompletní záloha je zkopírovaná včetně týdenních a elektroměrových odečtů.');
     } catch (e) {
       ta.focus(); ta.select();
-      say('bStatus', 'Záloha je v poli a je označená. Zkopírujte ji ručně.');
+      say('bStatus', 'Kompletní záloha je v poli a je označená. Zkopírujte ji ručně.');
     }
   });
 
@@ -871,14 +1154,68 @@ details[open] summary { margin-bottom: 10px; }
     r.readAsText(file);
   });
 
+  function validReadingDate(value) {
+    if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    var date = new Date(value + 'T12:00:00');
+    return isFinite(date.getTime()) && date.getFullYear() === Number(value.slice(0,4)) &&
+      date.getMonth() + 1 === Number(value.slice(5,7)) && date.getDate() === Number(value.slice(8,10));
+  }
+  function cleanDatedBackup(raw, kind) {
+    if (!Array.isArray(raw)) return null;
+    var out = [], seen = {};
+    for (var i = 0; i < raw.length; i++) {
+      var x = raw[i];
+      if (!x || typeof x !== 'object' || !validReadingDate(x.date) || seen[x.date]) return null;
+      seen[x.date] = true;
+      var updatedAt = Number(x.updatedAt);
+      updatedAt = isFinite(updatedAt) && updatedAt >= 0 ? updatedAt : 0;
+      if (x._deleted === true) { out.push({date:x.date, _deleted:true, updatedAt:updatedAt}); continue; }
+      var rec = { date:x.date, updatedAt:updatedAt };
+      if (kind === 'weekly') {
+        var vals = ['energyStart','energy','gridStart','grid'];
+        for (var j=0;j<vals.length;j++) if (!isFinite(Number(x[vals[j]])) || Number(x[vals[j]]) < 0) return null;
+        rec.energyStart=Number(x.energyStart); rec.energy=Number(x.energy); rec.gridStart=Number(x.gridStart); rec.grid=Number(x.grid);
+        if (rec.energy < rec.energyStart || rec.grid < rec.gridStart) return null;
+        var price = x.price === undefined ? 4.5 : Number(x.price);
+        if (!isFinite(price) || price < 0) return null;
+        rec.price=price;
+        if (x.gridPrice != null && x.gridPrice !== '') { var gpx = Number(x.gridPrice); if (!isFinite(gpx) || gpx < 0) return null; rec.gridPrice = gpx; }
+      } else {
+        var meterVals = ['startVT','startNT','vt','nt','priceVT','priceNT'];
+        for (var k=0;k<meterVals.length;k++) if (!isFinite(Number(x[meterVals[k]])) || Number(x[meterVals[k]]) < 0) return null;
+        rec.startVT=Number(x.startVT); rec.startNT=Number(x.startNT); rec.vt=Number(x.vt); rec.nt=Number(x.nt);
+        rec.priceVT=Number(x.priceVT); rec.priceNT=Number(x.priceNT); rec.replaced=!!x.replaced;
+        if (rec.replaced) {
+          var replacedVals=['oldVT','oldNT','newVT','newNT'];
+          for (var z=0;z<replacedVals.length;z++) if (!isFinite(Number(x[replacedVals[z]])) || Number(x[replacedVals[z]]) < 0) return null;
+          rec.oldVT=Number(x.oldVT); rec.oldNT=Number(x.oldNT); rec.newVT=Number(x.newVT); rec.newNT=Number(x.newNT);
+          if (rec.oldVT < rec.startVT || rec.oldNT < rec.startNT || rec.vt < rec.newVT || rec.nt < rec.newNT) return null;
+        } else if (rec.vt < rec.startVT || rec.nt < rec.startNT) return null;
+      }
+      out.push(rec);
+    }
+    return out;
+  }
   function parseBackup(txt) {
     var o;
     try { o = JSON.parse(String(txt).trim()); } catch (e) { return null; }
-    var raw = Array.isArray(o) ? o : (o && o.data);
-    if (!Array.isArray(raw) || !raw.length) return null;
+    var raw = Array.isArray(o) ? o : (o && Array.isArray(o.data) ? o.data : []);
     var list = clean(raw);
-    if (!list.length || list.length !== raw.length) return null;
-    return { list: list, cena: o && parseFloat(o.cena) };
+    if (list.length !== raw.length) return null;
+    var weeks = null, meters = null;
+    if (!Array.isArray(o) && o && Object.prototype.hasOwnProperty.call(o, 'weeklyReadings')) {
+      weeks = cleanDatedBackup(o.weeklyReadings, 'weekly'); if (!weeks) return null;
+    }
+    if (!Array.isArray(o) && o && Object.prototype.hasOwnProperty.call(o, 'meterReadings')) {
+      meters = cleanDatedBackup(o.meterReadings, 'meter'); if (!meters) return null;
+    }
+    var deleted = (!Array.isArray(o) && o && Object.prototype.hasOwnProperty.call(o,'deleted')) ? cleanDeletions(o.deleted) : null;
+    var any = list.length || (weeks && weeks.length) || (meters && meters.length) || (deleted && Object.keys(deleted).length);
+    if (!any) return null;
+    return { list:list, cena:o && parseFloat(o.cena), deleted:deleted,
+      priceVT:(!Array.isArray(o) && o && Object.prototype.hasOwnProperty.call(o,'priceVT')) ? parseFloat(o.priceVT) : null,
+      priceNT:(!Array.isArray(o) && o && Object.prototype.hasOwnProperty.call(o,'priceNT')) ? parseFloat(o.priceNT) : null,
+      weeklyReadings:weeks, meterReadings:meters };
   }
 
   importBtn.addEventListener('click', function () {
@@ -887,18 +1224,37 @@ details[open] summary { margin-bottom: 10px; }
     if (!pendImp) {
       pendImp = true;
       importBtn.textContent = 'Potvrdit nahrazení';
-      say('bStatus', 'Načtením se nahradí všechna data v tomto zařízení (' + res.list.length + ' záznamů ze zálohy). Potvrďte tlačítkem.', true);
+      say('bStatus', 'Načtením se nahradí měsíční data (' + res.list.length + ' záznamů)' + (res.weeklyReadings !== null ? ', týdenní odečty (' + res.weeklyReadings.length + ')' : '') + (res.meterReadings !== null ? ', elektroměrové odečty (' + res.meterReadings.length + ')' : '') + '. Potvrďte tlačítkem.', true);
       return;
     }
     d = res.list;
+    if (res.deleted !== null) deletions = cleanDeletions(res.deleted);
     d.forEach(function (x) {
       var key = x.year + '-' + x.month;
       x.updatedAt = Math.max(+x.updatedAt || 0, Date.now(), (+deletions[key] || 0) + 1);
       delete deletions[key];
     });
     if (isFinite(res.cena) && res.cena >= 0) { prc = res.cena; pI.value = prc.toFixed(1); }
-    pendDel = null; fy = null; save(); buildEntryYears(); selectNextMonth(); render(); resetImport();
-    say('bStatus', 'Načteno ' + d.length + ' záznamů.');
+    if (isFinite(res.priceVT) && res.priceVT >= 0) { priceVT = res.priceVT; store.set('fvePriceVT', String(priceVT)); }
+    if (isFinite(res.priceNT) && res.priceNT >= 0) { priceNT = res.priceNT; store.set('fvePriceNT', String(priceNT)); }
+    if (res.weeklyReadings !== null) {
+      weeklyReadings = res.weeklyReadings;
+      weeklyReadings.forEach(function (x) { x.updatedAt = Math.max(+x.updatedAt || 0, Date.now()); });
+      store.set('fveWeeklyReadings', JSON.stringify(weeklyReadings));
+    }
+    if (res.meterReadings !== null) {
+      meterReadings = res.meterReadings;
+      meterReadings.forEach(function (x) { x.updatedAt = Math.max(+x.updatedAt || 0, Date.now()); });
+      store.set('fveMeterReadings', JSON.stringify(meterReadings));
+    }
+    pendDel = null; fy = null; save(); buildEntryYears(); selectNextMonth(); render();
+    if (typeof renderWorkflow === 'function') renderWorkflow();
+    if (typeof renderWeekCompare === 'function') renderWeekCompare();
+    if (typeof renderMonthCompare === 'function') renderMonthCompare();
+    if (typeof renderYearCompare === 'function') renderYearCompare();
+    if (typeof persistWorkflow === 'function') persistWorkflow();
+    resetImport();
+    say('bStatus', 'Načteno ' + d.length + ' měsíčních záznamů' + (res.weeklyReadings !== null ? ', ' + sortedByDate(weeklyReadings).length + ' týdenních odečtů' : '') + (res.meterReadings !== null ? ', ' + sortedByDate(meterReadings).length + ' elektroměrových odečtů' : '') + '.');
   });
 
   /* ---------- Firebase Authentication + user-scoped Realtime Database ---------- */
@@ -975,10 +1331,10 @@ details[open] summary { margin-bottom: 10px; }
         if (response.status === 401 || response.status === 403) throw new Error('Přístup zamítnut. Zkontrolujte přihlášení, URL databáze a pravidla Firebase.');
         if (!response.ok) throw new Error('Cloud nelze přečíst (HTTP ' + response.status + '). Zkontrolujte URL a pravidla Firebase.');
         var etag = response.headers.get('ETag');
-        if (!etag) throw new Error('Firebase neposkytl ETag. Zkontrolujte URL Realtime Database. Data nebyla změněna.');
+        if (!etag) throw new Error('Firebase neposkytl ETag. Zkontrolujte URL Realtime Database; pokud sedí, prohlížeč hlavičku ETag nezpřístupnil. Data nebyla změněna.');
         var cloud = await response.json();
-        if (cloud !== null && (!cloud || typeof cloud !== 'object' || !Array.isArray(cloud.data))) throw new Error('Cloud obsahuje neočekávaný formát. Data nebyla přepsána.');
-        var remote = cloud ? clean(cloud.data) : [];
+        if (cloud !== null && (typeof cloud !== 'object' || Array.isArray(cloud) || (cloud.data !== undefined && !Array.isArray(cloud.data)))) throw new Error('Cloud obsahuje neočekávaný formát. Data nebyla přepsána.');
+        var remote = cloud && Array.isArray(cloud.data) ? clean(cloud.data) : [];
         var remoteDeletions = cloud ? cleanDeletions(cloud.deleted) : {};
         var mergedDeletions = mergeDeletions(deletions, remoteDeletions);
         var merged = mergeRecords(d, remote, mergedDeletions);
@@ -989,7 +1345,8 @@ details[open] summary { margin-bottom: 10px; }
           var cp = parseFloat(cloud.cena);
           if (isFinite(cp) && cp >= 0) { mergedPrice = cp; mergedPriceTime = remotePriceTime; }
         }
-        var payload = { data: merged, deleted: mergedDeletions, cena: mergedPrice, priceUpdatedAt: Math.max(remotePriceTime, mergedPriceTime), updatedAt: Date.now() };
+        // Zachovej i novější/nezávislá pole (týdenní a elektroměrové odečty); PUT nahrazuje celý dokument.
+        var payload = Object.assign({}, cloud || {}, { data: merged, deleted: mergedDeletions, cena: mergedPrice, priceUpdatedAt: Math.max(remotePriceTime, mergedPriceTime), updatedAt: Date.now() });
         var shouldWrite = cloud === null || JSON.stringify(remote) !== JSON.stringify(merged) || JSON.stringify(remoteDeletions) !== JSON.stringify(mergedDeletions) || +cloud.priceUpdatedAt !== payload.priceUpdatedAt || parseFloat(cloud.cena) !== mergedPrice;
         if (shouldWrite) {
           var put = await fetch(path + '?auth=' + encodeURIComponent(authState.idToken), { method: 'PUT', headers: { 'Content-Type': 'application/json', 'If-Match': etag }, body: JSON.stringify(payload) });
@@ -1050,6 +1407,138 @@ details[open] summary { margin-bottom: 10px; }
   selectNextMonth();
   render();
   if (syncConfig()) refreshAuth().then(function(ok){if(ok)doSync(false);});
+
+  // New weekly ANTIK readings and monthly utility-meter readings. Stored separately to preserve legacy records.
+  function readArray(key){try{var a=JSON.parse(store.get(key)||'[]');return Array.isArray(a)?a:[]}catch(e){return []}}
+  var weeklyReadings=readArray('fveWeeklyReadings'), meterReadings=readArray('fveMeterReadings');
+  var editingWeeklyDate=null, editingMeterDate=null;
+  function dateText(v){return v?new Date(v+'T12:00:00').toLocaleDateString('cs-CZ'):'—'}
+  function numVal(id){return parseFloat($(id).value)}
+  function sortedByDate(a){return a.filter(function(x){return x&&!x._deleted}).slice().sort(function(x,y){return x.date.localeCompare(y.date)})}
+  // Preserve the original baseline for the first entry; later starts always follow the prior endpoint.
+  function reconcileWeeklyStarts(year,baseline){
+    var rows=sortedByDate(weeklyReadings).filter(function(x){return x.date.slice(0,4)===String(year)}),stamp=Date.now();
+    if(!rows.length)return;
+    if(baseline){if(rows[0].energyStart!==baseline.energyStart||rows[0].gridStart!==baseline.gridStart){rows[0].energyStart=baseline.energyStart;rows[0].gridStart=baseline.gridStart;rows[0].updatedAt=stamp;}}
+    for(var i=1;i<rows.length;i++){var prev=rows[i-1],cur=rows[i];if(cur.energyStart!==prev.energy||cur.gridStart!==prev.grid){cur.energyStart=prev.energy;cur.gridStart=prev.grid;cur.updatedAt=stamp;}}
+  }
+  function reconcileMeterStarts(baseline){
+    var rows=sortedByDate(meterReadings),stamp=Date.now();
+    if(!rows.length)return;
+    if(baseline&&(rows[0].startVT!==baseline.startVT||rows[0].startNT!==baseline.startNT)){rows[0].startVT=baseline.startVT;rows[0].startNT=baseline.startNT;rows[0].updatedAt=stamp;}
+    for(var i=1;i<rows.length;i++){var prev=rows[i-1],cur=rows[i];if(cur.startVT!==prev.vt||cur.startNT!==prev.nt){cur.startVT=prev.vt;cur.startNT=prev.nt;cur.updatedAt=stamp;}}
+  }
+  function weeklyDelta(rec){var year=rec.date.slice(0,4), prior=sortedByDate(weeklyReadings).filter(function(x){return x.date.slice(0,4)===year&&x.date<rec.date}).slice(-1)[0];var es=isFinite(rec.energyStart)?rec.energyStart:(prior?prior.energy:0),gs=isFinite(rec.gridStart)?rec.gridStart:(prior?prior.grid:0);return {energy:rec.energy-es,grid:rec.grid-gs,prior:prior,energyStart:es,gridStart:gs}}
+  function meterDelta(rec){var prior=sortedByDate(meterReadings).filter(function(x){return x.date<rec.date}).slice(-1)[0];var svt=isFinite(rec.startVT)?rec.startVT:(prior?prior.vt:0),snt=isFinite(rec.startNT)?rec.startNT:(prior?prior.nt:0);if(rec.replaced){return {vt:(rec.oldVT-svt)+(rec.vt-rec.newVT),nt:(rec.oldNT-snt)+(rec.nt-rec.newNT),prior:prior}}return {vt:rec.vt-svt,nt:rec.nt-snt,prior:prior}}
+  function fmtMoney(n){return n.toLocaleString('cs-CZ',{minimumFractionDigits:2,maximumFractionDigits:2})+' Kč'}
+  function persistWorkflow(){store.set('fveWeeklyReadings',JSON.stringify(weeklyReadings));store.set('fveMeterReadings',JSON.stringify(meterReadings));try{scheduleSync()}catch(err){say('syncStatus','Odečet je uložen místně, synchronizace se nepodařila: '+(err.message||'chyba'),true)}}
+  function renderWorkflow(){
+    var ws=sortedByDate(weeklyReadings),ms=sortedByDate(meterReadings);
+    $('weeklyList').innerHTML=ws.slice().reverse().map(function(x){var q=weeklyDelta(x);return '<div class="workflow-item"><strong>'+dateText(x.date)+'</strong>FVE: '+f1(x.energy)+' kWh (+'+f1(q.energy)+' za období) · Dokup: '+f1(x.grid)+' kWh (+'+f1(q.grid)+')<div class="workflow-actions"><button type="button" data-reading-action="edit-weekly" data-date="'+x.date+'">Upravit</button><button type="button" class="delete" data-reading-action="delete-weekly" data-date="'+x.date+'">Smazat</button></div></div>'}).join('')||'<p class="hint">Zatím žádné týdenní odečty.</p>';
+    $('meterList').innerHTML=ms.slice().reverse().map(function(x){var q=meterDelta(x),cost=Math.max(0,q.vt)*x.priceVT+Math.max(0,q.nt)*x.priceNT;return '<div class="workflow-item"><strong>'+dateText(x.date)+(x.replaced?' · výměna elektroměru':'')+'</strong>VT: '+f1(q.vt)+' kWh · NT: '+f1(q.nt)+' kWh · Náklady: '+fmtMoney(cost)+'<div class="workflow-actions"><button type="button" data-reading-action="edit-meter" data-date="'+x.date+'">Upravit</button><button type="button" class="delete" data-reading-action="delete-meter" data-date="'+x.date+'">Smazat</button></div></div>'}).join('')||'<p class="hint">Zatím žádné měsíční odečty.</p>';
+    renderNotes();renderStats();renderYearDashboard();renderMeterMonthlyOverview();renderFveMonthlyOverview();
+  }
+  function setField(id,value){$(id).value=value==null?'':value}
+  function editWeekly(date){var x=weeklyReadings.find(function(r){return r.date===date&&!r._deleted});if(!x)return;editingWeeklyDate=date;setField('weeklyDate',x.date);if(window.__syncWeeklyCalendarLabel)window.__syncWeeklyCalendarLabel();setField('weeklyEnergyStart',x.energyStart);setField('weeklyEnergy',x.energy);setField('weeklyGridStart',x.gridStart);setField('weeklyGrid',x.grid);setField('kwPrice',x.price==null?4.5:x.price);setField('weeklyGridPrice',x.gridPrice);$('weeklyStatus').textContent='Upravuješ odečet '+dateText(date)+'. Po uložení se záznam se stejným datem přepíše.';$('weeklyStatus').className='status';updateWorkflowCalc();$('weeklyForm').scrollIntoView({behavior:'smooth',block:'start'})}
+  function editMeter(date){var x=meterReadings.find(function(r){return r.date===date&&!r._deleted});if(!x)return;editingMeterDate=date;setField('meterDate',x.date);if(window.__syncMeterCalendarLabel)window.__syncMeterCalendarLabel();setField('meterStartVT',x.startVT);setField('meterStartNT',x.startNT);setField('meterVT',x.vt);setField('meterNT',x.nt);setField('meterPriceVT',x.priceVT);setField('meterPriceNT',x.priceNT);$('meterReplace').checked=!!x.replaced;$('replaceFields').hidden=!x.replaced;['oldVT','oldNT','newVT','newNT'].forEach(function(id){setField(id,x[id])});$('meterStatus').textContent='Upravuješ odečet '+dateText(date)+'. Po uložení se záznam se stejným datem přepíše.';$('meterStatus').className='status';updateWorkflowCalc();$('meterForm').scrollIntoView({behavior:'smooth',block:'start'})}
+  function deleteReading(kind,date){
+    var arr=kind==='weekly'?weeklyReadings:meterReadings,idx=arr.findIndex(function(r){return r.date===date&&!r._deleted});if(idx<0)return;
+    var saved=Object.assign({},arr[idx]),ordered=sortedByDate(arr),position=ordered.findIndex(function(r){return r.date===date});
+    if(kind==='meter'&&saved.replaced&&ordered.slice(position+1).length){$('meterStatus').textContent='Tento odečet zaznamenává výměnu elektroměru a navazují na něj další odečty. Kvůli správnému výpočtu ho nemaž; případně oprav jeho hodnoty.';$('meterStatus').className='status bad';return;}
+    if(!window.confirm('Opravdu smazat odečet '+dateText(date)+'? Tato změna se synchronizuje i do cloudu.'))return;
+    var baseline=null;if(position===0){baseline=kind==='weekly'?{energyStart:saved.energyStart,gridStart:saved.gridStart}:{startVT:saved.startVT,startNT:saved.startNT};}if(kind==='weekly'&&editingWeeklyDate===date)editingWeeklyDate=null;if(kind==='meter'&&editingMeterDate===date)editingMeterDate=null;
+    arr[idx]={date:date,_deleted:true,updatedAt:Date.now()};
+    if(kind==='weekly')reconcileWeeklyStarts(date.slice(0,4),baseline);else reconcileMeterStarts(baseline);
+    store.set(kind==='weekly'?'fveWeeklyReadings':'fveMeterReadings',JSON.stringify(arr));
+    renderWorkflow();if(kind==='weekly'){renderWeekCompare();renderMonthCompare();renderYearCompare();$('weeklyStatus').textContent='Odečet '+dateText(date)+' byl smazán; návaznost dalších odečtů byla přepočítána.';updateWorkflowCalc()}else{$('meterStatus').textContent='Odečet '+dateText(date)+' byl smazán; návaznost dalších odečtů byla přepočítána.';updateWorkflowCalc()}persistWorkflow();
+  }
+  document.addEventListener('click',function(ev){var b=ev.target.closest('[data-reading-action]');if(!b)return;var a=b.getAttribute('data-reading-action'),d=b.getAttribute('data-date');if(a==='edit-weekly')editWeekly(d);else if(a==='edit-meter')editMeter(d);else if(a==='delete-weekly')deleteReading('weekly',d);else if(a==='delete-meter')deleteReading('meter',d)});
+  function updateWorkflowCalc(){var date=$('weeklyDate').value,es=numVal('weeklyEnergyStart'),e=numVal('weeklyEnergy'),gs=numVal('weeklyGridStart'),g=numVal('weeklyGrid');if(date&&[es,e,gs,g].every(function(n){return Number.isFinite(n)&&n>=0})){var q=weeklyDelta({date:date,energy:e,grid:g,energyStart:es,gridStart:gs});$('weeklyCalc').textContent='Přírůstek za období: výroba '+f1(q.energy)+' kWh · dokup '+f1(q.grid)+' kWh'}else $('weeklyCalc').textContent='Vyplň počáteční a konečné stavy, aby šlo spočítat přírůstky.';
+    var md=$('meterDate').value,svt=numVal('meterStartVT'),snt=numVal('meterStartNT'),vt=numVal('meterVT'),nt=numVal('meterNT'),pv=numVal('meterPriceVT'),pn=numVal('meterPriceNT'),rep=$('meterReplace').checked;var meterVals=[svt,snt,vt,nt,pv,pn];if(rep)meterVals=meterVals.concat([numVal('oldVT'),numVal('oldNT'),numVal('newVT'),numVal('newNT')]);if(md&&meterVals.every(function(n){return Number.isFinite(n)&&n>=0})){var rec={date:md,vt:vt,nt:nt,startVT:svt,startNT:snt,priceVT:pv,priceNT:pn,replaced:rep,oldVT:numVal('oldVT'),oldNT:numVal('oldNT'),newVT:numVal('newVT'),newNT:numVal('newNT')};var q2=meterDelta(rec);var ok=q2.vt>=0&&q2.nt>=0&&(!rep||(rec.oldVT>=svt&&rec.oldNT>=snt&&vt>=rec.newVT&&nt>=rec.newNT));$('meterCalc').textContent=ok?'Spotřeba: VT '+f1(q2.vt)+' kWh · NT '+f1(q2.nt)+' kWh · náklady '+fmtMoney(q2.vt*pv+q2.nt*pn):'Zkontroluj odečty a ceny.'}else $('meterCalc').textContent='Vyplň počáteční a konečné stavy i obě ceny.'}
+  $('meterReplace').addEventListener('change',function(){$('replaceFields').hidden=!this.checked;updateWorkflowCalc()});
+  ['weeklyDate','weeklyEnergyStart','weeklyEnergy','weeklyGridStart','weeklyGrid'].forEach(function(id){$(id).addEventListener('input',updateWorkflowCalc)});
+  ['meterDate','meterStartVT','meterVT','meterStartNT','meterNT','meterPriceVT','meterPriceNT','oldVT','oldNT','newVT','newNT'].forEach(function(id){$(id).addEventListener('input',updateWorkflowCalc)});
+  function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+  function advanceWeekly(){var cur=$('weeklyDate').value;if(!cur)return;var p=cur.split('-').map(Number);$('weeklyDate').value=ymd(new Date(p[0],p[1]-1,p[2]+7,12));if(window.__syncWeeklyCalendarLabel)window.__syncWeeklyCalendarLabel();suggestStarts()}
+  function advanceMeter(){var cur=$('meterDate').value;if(!cur)return;var p=cur.split('-').map(Number);$('meterDate').value=ymd(new Date(p[0],p[1]+1,0,12));if(window.__syncMeterCalendarLabel)window.__syncMeterCalendarLabel();suggestStarts()}
+  function suggestStarts(){var wd=$('weeklyDate').value,wp=sortedByDate(weeklyReadings).filter(function(x){return wd&&(!editingWeeklyDate||wd===editingWeeklyDate||x.date!==editingWeeklyDate)&&x.date<wd&&x.date.slice(0,4)===wd.slice(0,4)}).slice(-1)[0];if(wd){var hasEarlier=sortedByDate(weeklyReadings).some(function(x){return x.date<wd});$('weeklyEnergyStart').value=wp?wp.energy:(hasEarlier?0:'');$('weeklyGridStart').value=wp?wp.grid:(hasEarlier?0:'');if(!editingWeeklyDate){$('weeklyEnergy').value='';$('weeklyGrid').value=''}}var md=$('meterDate').value,mp=sortedByDate(meterReadings).filter(function(x){return md&&(!editingMeterDate||md===editingMeterDate||x.date!==editingMeterDate)&&x.date<md}).slice(-1)[0];if(md){$('meterStartVT').value=mp?mp.vt:'';$('meterStartNT').value=mp?mp.nt:'';if(!editingMeterDate){$('meterVT').value='';$('meterNT').value=''}}updateWorkflowCalc()}
+  $('weeklyDate').addEventListener('change',suggestStarts);$('meterDate').addEventListener('change',suggestStarts);
+  var today=new Date(),todayStr=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  var gpStored=parseFloat(store.get('fveGridPrice'));if(Number.isFinite(gpStored)&&gpStored>=0)$('weeklyGridPrice').value=String(gpStored);$('weeklyDate').value=todayStr;$('meterDate').value=todayStr;if(window.__syncWeeklyCalendarLabel)window.__syncWeeklyCalendarLabel();if(window.__syncMeterCalendarLabel)window.__syncMeterCalendarLabel();suggestStarts();
+  function saveWeeklyReading(ev){if(ev){ev.preventDefault();ev.stopPropagation()}var status=$('weeklyStatus');try{var date=$('weeklyDate').value,es=numVal('weeklyEnergyStart'),e=numVal('weeklyEnergy'),gs=numVal('weeklyGridStart'),g=numVal('weeklyGrid'),price=numVal('kwPrice'),gp=numVal('weeklyGridPrice');if(Number.isFinite(gp)&&gp<0){status.textContent='Cena dokupu nesmí být záporná.';status.className='status bad';return}var movedFrom=editingWeeklyDate&&editingWeeklyDate!==date?editingWeeklyDate:null;var allWeeks=sortedByDate(weeklyReadings).filter(function(x){return !movedFrom||x.date!==movedFrom});if(movedFrom&&allWeeks.some(function(x){return x.date===date})){status.textContent='Na zvolené datum už odečet existuje. Nejprve uprav záznam, který má toto datum.';status.className='status bad';return}var prior=allWeeks.filter(function(x){return x.date<date&&x.date.slice(0,4)===date.slice(0,4)}).slice(-1)[0],next=allWeeks.filter(function(x){return x.date>date&&x.date.slice(0,4)===date.slice(0,4)}).slice(0,1)[0];if(!date||![es,e,gs,g,price].every(function(n){return Number.isFinite(n)&&n>=0})||e<es||g<gs||(prior&&(Math.abs(es-prior.energy)>1e-9||Math.abs(gs-prior.grid)>1e-9))||(next&&(e>next.energy+1e-9||g>next.grid+1e-9))){status.textContent='Zkontroluj datum, cenu a návaznost stavů. Počáteční stav musí navazovat na předchozí odečet a konečný stav nesmí překročit pozdější odečet.';status.className='status bad';return}if(prior&&e===es&&g===gs){status.textContent='Konečné stavy jsou stejné jako počáteční. Zadej nové stavy čítačů.';status.className='status bad';return}var stamp=Date.now(),oldYear=null,oldBaseline=null;if(movedFrom){var oldIdx=weeklyReadings.findIndex(function(x){return x.date===movedFrom&&!x._deleted});if(oldIdx>=0){var oldRec=Object.assign({},weeklyReadings[oldIdx]),oldPrev=sortedByDate(weeklyReadings).filter(function(x){return x.date<movedFrom&&x.date.slice(0,4)===movedFrom.slice(0,4)}).slice(-1)[0];oldYear=movedFrom.slice(0,4);if(!oldPrev)oldBaseline={energyStart:oldRec.energyStart,gridStart:oldRec.gridStart};weeklyReadings[oldIdx]={date:movedFrom,_deleted:true,updatedAt:stamp};}}var rec={date:date,energyStart:es,energy:e,gridStart:gs,grid:g,price:price,updatedAt:stamp};if(Number.isFinite(gp)){rec.gridPrice=gp;store.set('fveGridPrice',String(gp))}var same=weeklyReadings.findIndex(function(x){return x.date===date});if(same>=0)weeklyReadings[same]=rec;else weeklyReadings.push(rec);reconcileWeeklyStarts(date.slice(0,4));if(oldYear&&oldYear!==date.slice(0,4))reconcileWeeklyStarts(oldYear,oldBaseline);else if(oldBaseline)reconcileWeeklyStarts(date.slice(0,4),oldBaseline);editingWeeklyDate=null;store.set('fveWeeklyReadings',JSON.stringify(weeklyReadings));var active=weeklyReadings.find(function(x){return x.date===date&&!x._deleted}),q=weeklyDelta(active||rec);renderWorkflow();renderWeekCompare();renderMonthCompare();renderYearCompare();status.textContent='Uloženo. Přírůstek: FVE '+f1(q.energy)+' kWh, dokup '+f1(q.grid)+' kWh.'+(storageOk?'':' Pozor: prohlížeč nepovolil místní uložení.');status.className='status';advanceWeekly();updateWorkflowCalc();try{scheduleSync()}catch(syncErr){say('syncStatus','Odečet je uložen v tomto zařízení; synchronizace se nezdařila: '+(syncErr.message||'chyba'),true)}}catch(err){status.textContent='Odečet se nepodařilo uložit: '+(err&&err.message?err.message:String(err));status.className='status bad';}}
+  $('weeklyForm').addEventListener('submit',saveWeeklyReading);
+  function saveMeterReading(ev){if(ev){ev.preventDefault();ev.stopPropagation()}var status=$('meterStatus');try{var date=$('meterDate').value,svt=numVal('meterStartVT'),snt=numVal('meterStartNT'),vt=numVal('meterVT'),nt=numVal('meterNT'),pv=numVal('meterPriceVT'),pn=numVal('meterPriceNT'),rep=$('meterReplace').checked;var movedFrom=editingMeterDate&&editingMeterDate!==date?editingMeterDate:null;var allMeters=sortedByDate(meterReadings).filter(function(x){return !movedFrom||x.date!==movedFrom});if(movedFrom&&allMeters.some(function(x){return x.date===date})){status.textContent='Na zvolené datum už odečet elektroměru existuje. Nejprve uprav záznam, který má toto datum.';status.className='status bad';return}var prior=allMeters.filter(function(x){return x.date<date}).slice(-1)[0],next=allMeters.filter(function(x){return x.date>date}).slice(0,1)[0];if(movedFrom){var oldBeingMoved=meterReadings.find(function(x){return x.date===movedFrom&&!x._deleted});if(oldBeingMoved&&oldBeingMoved.replaced&&allMeters.some(function(x){return x.date>movedFrom})){status.textContent='Datum záznamu s výměnou elektroměru nelze změnit, protože na něj navazují další odečty.';status.className='status bad';return}}var nextVT=next?(next.replaced?next.oldVT:next.vt):null,nextNT=next?(next.replaced?next.oldNT:next.nt):null;if(!date||![svt,snt,vt,nt,pv,pn].every(function(n){return Number.isFinite(n)&&n>=0})||(!rep&&(vt<svt||nt<snt||(prior&&(Math.abs(svt-prior.vt)>1e-9||Math.abs(snt-prior.nt)>1e-9))))||(rep&&prior&&(Math.abs(svt-prior.vt)>1e-9||Math.abs(snt-prior.nt)>1e-9))||(next&&(vt>nextVT+1e-9||nt>nextNT+1e-9))){status.textContent='Zkontroluj počáteční a konečné stavy VT/NT a ceny. Počáteční stavy musí navazovat na předchozí odečet a konečné nesmí překročit pozdější odečet.';status.className='status bad';return}var rec={date:date,startVT:svt,startNT:snt,vt:vt,nt:nt,priceVT:pv,priceNT:pn,replaced:rep,updatedAt:Date.now()};if(rep){rec.oldVT=numVal('oldVT');rec.oldNT=numVal('oldNT');rec.newVT=numVal('newVT');rec.newNT=numVal('newNT');if(![rec.oldVT,rec.oldNT,rec.newVT,rec.newNT].every(function(n){return Number.isFinite(n)&&n>=0})||rec.oldVT<svt||rec.oldNT<snt||vt<rec.newVT||nt<rec.newNT||(prior&&(rec.oldVT<prior.vt-1e-9||rec.oldNT<prior.nt-1e-9))){status.textContent='Při výměně zkontroluj konečné stavy starého elektroměru, počáteční a aktuální stavy nového elektroměru i návaznost na předchozí odečet.';status.className='status bad';return}}var stamp=Date.now(),oldYearBaseline=null,oldIndex=-1;if(movedFrom){oldIndex=meterReadings.findIndex(function(x){return x.date===movedFrom&&!x._deleted});if(oldIndex>=0){var oldRec=Object.assign({},meterReadings[oldIndex]),oldPrev=sortedByDate(meterReadings).filter(function(x){return x.date<movedFrom}).slice(-1)[0];if(!oldPrev)oldYearBaseline={startVT:oldRec.startVT,startNT:oldRec.startNT};meterReadings[oldIndex]={date:movedFrom,_deleted:true,updatedAt:stamp};}}rec.updatedAt=stamp;var same=meterReadings.findIndex(function(x){return x.date===date});if(same>=0)meterReadings[same]=rec;else meterReadings.push(rec);reconcileMeterStarts();if(oldYearBaseline&&movedFrom)reconcileMeterStarts(oldYearBaseline);editingMeterDate=null;store.set('fveMeterReadings',JSON.stringify(meterReadings));var active=meterReadings.find(function(x){return x.date===date&&!x._deleted}),q=meterDelta(active||rec),cost=Math.max(0,q.vt)*pv+Math.max(0,q.nt)*pn;/* Po uložení další záznam nezačínej v režimu výměny: zabrání to nechtěnému dvojímu započtení výměny v dalším měsíci. */$('meterReplace').checked=false;$('replaceFields').hidden=true;['meterStartVT','meterVT','meterStartNT','meterNT','oldVT','oldNT','newVT','newNT'].forEach(function(id){$(id).value=''});renderWorkflow();status.textContent='Uloženo. Spotřeba VT '+f1(q.vt)+' kWh, NT '+f1(q.nt)+' kWh; náklady '+fmtMoney(cost)+'.'+(storageOk?'':' Pozor: prohlížeč nepovolil místní uložení.');status.className='status';advanceMeter();updateWorkflowCalc();try{scheduleSync()}catch(syncErr){say('syncStatus','Odečet je uložen v tomto zařízení; synchronizace se nezdařila: '+(syncErr.message||'chyba'),true)}}catch(err){status.textContent='Odečet se nepodařilo uložit: '+(err&&err.message?err.message:String(err));status.className='status bad'}}$('meterForm').addEventListener('submit',saveMeterReading);
+  // Include the new collections in the same Firebase user document and merge them by date.
+  function mergeDated(local,remote){var map={};(local||[]).concat(remote||[]).forEach(function(x){if(!x||!x.date)return;var old=map[x.date],xt=+x.updatedAt||0,ot=old?(+old.updatedAt||0):-1;if(!old||xt>ot||(xt===ot&&x._deleted===true&&old._deleted!==true))map[x.date]=x});return Object.keys(map).sort().map(function(k){return map[k]})}
+  var originalDoSync=doSync;
+  doSync=async function(manual){
+    // First run the original sync for legacy monthly records, prices and tombstones.
+    await originalDoSync(manual);
+    var cfg=syncConfig();if(!cfg)return;
+    if(!authState&&!(await refreshAuth()))return;
+    if(syncing)return;
+    syncing=true;if(manual)say('syncStatus','Probíhá synchronizace…');
+    try{var path=cloudPath(cfg),attempt=0,done=false;while(attempt++<6&&!done){var response=await fetch(path+'?auth='+encodeURIComponent(authState.idToken),{cache:'no-store',headers:{'X-Firebase-ETag':'true'}});if(!response.ok)throw new Error('Cloud nelze přečíst (HTTP '+response.status+').');var etag=response.headers.get('ETag'),cloud=await response.json();if(!etag)throw new Error('Firebase neposkytl ETag.');var remoteW=cloud&&cloud.weeklyReadings||[],remoteM=cloud&&cloud.meterReadings||[];var mw=mergeDated(weeklyReadings,remoteW),mm=mergeDated(meterReadings,remoteM);var payload=cloud&&typeof cloud==='object'?Object.assign({},cloud):{};payload.weeklyReadings=mw;payload.meterReadings=mm;var changed=JSON.stringify(remoteW)!==JSON.stringify(mw)||JSON.stringify(remoteM)!==JSON.stringify(mm);if(changed){var put=await fetch(path+'?auth='+encodeURIComponent(authState.idToken),{method:'PUT',headers:{'Content-Type':'application/json','If-Match':etag},body:JSON.stringify(payload)});if(put.status===412)continue;if(!put.ok)throw new Error('Cloud nelze aktualizovat (HTTP '+put.status+').')}weeklyReadings=mw;meterReadings=mm;store.set('fveWeeklyReadings',JSON.stringify(mw));store.set('fveMeterReadings',JSON.stringify(mm));done=true}if(!done)throw new Error('Synchronizaci opakuj.');renderWorkflow();renderWeekCompare();renderMonthCompare();renderYearCompare();if(manual)say('syncStatus','Synchronizováno včetně týdenních a měsíčních odečtů.')}catch(err){say('syncStatus','Synchronizace nových odečtů se nezdařila: '+(err.message||'chyba')+'. Místní data zůstala uložena.',true)}finally{syncing=false}
+  };
+  function overviewYears(records, dateField) {
+    var years = records.filter(function(r){return !r._deleted && r[dateField];}).map(function(r){return Number(r[dateField].slice(0,4));}).filter(function(y){return y>1900;});
+    var current = new Date().getFullYear(); years.push(current);
+    return years.filter(function(y,i,a){return a.indexOf(y)===i;}).sort(function(a,b){return b-a;});
+  }
+  function setOverviewYearSelect(id, years) {
+    var el=$(id), old=Number(el.value), chosen=years.indexOf(old)>=0?old:years[0];
+    el.innerHTML=years.map(function(y){return '<option value="'+y+'">'+y+'</option>';}).join('');
+    el.value=String(chosen);
+    return chosen;
+  }
+  function monthlyBar(value,max,cls,label) {
+    var width=value>0?Math.max(1.2,value/max*100):0;
+    return '<div class="monthly-bar-line"><span class="monthly-series-label">'+label+'</span><div class="monthly-track" role="img" aria-label="'+label+': '+(value>0?f1(value):'0')+' kWh"><div class="monthly-fill '+cls+'" style="width:'+width.toFixed(2)+'%"></div></div><span class="monthly-value">'+(value>0?f1(value):'–')+' kWh</span></div>';
+  }
+  function renderMeterMonthlyOverview() {
+    var records=sortedByDate(meterReadings), years=overviewYears(records,'date'), year=setOverviewYearSelect('meterOverviewYear',years);
+    var vt=Array(12).fill(0),nt=Array(12).fill(0),seen=Array(12).fill(false);
+    records.forEach(function(r){if(Number(r.date.slice(0,4))!==year)return;var m=Number(r.date.slice(5,7))-1;if(m<0||m>11)return;var q=meterDelta(r);vt[m]+=Math.max(0,q.vt);nt[m]+=Math.max(0,q.nt);seen[m]=true;});
+    var max=Math.max.apply(null,vt.concat(nt))||1,html='';
+    for(var i=0;i<12;i++) html+='<div class="monthly-row"><span class="monthly-label">'+MN[i]+'</span><div class="monthly-bars">'+monthlyBar(vt[i],max,'sun','VT')+monthlyBar(nt[i],max,'grid','NT')+'</div></div>';
+    $('meterMonthlyChart').innerHTML=html;
+    var totalVT=vt.reduce(function(a,b){return a+b},0),totalNT=nt.reduce(function(a,b){return a+b},0),count=seen.filter(Boolean).length;
+    $('meterYearTotal').innerHTML='<h3>Celkem za rok '+year+'</h3><div class="year-total-grid"><div>Spotřeba VT<strong>'+f1(totalVT)+' kWh</strong></div><div>Spotřeba NT<strong>'+f1(totalNT)+' kWh</strong></div><div>Celková spotřeba<strong>'+f1(totalVT+totalNT)+' kWh</strong></div><div>Měsíce s odečtem<strong>'+count+' / 12</strong></div></div>';
+  }
+  var fveOverviewMode='month';
+  function setFveOverviewMode(mode) {
+    fveOverviewMode=mode==='week'?'week':'month';
+    $('fveViewMonth').classList.toggle('active',fveOverviewMode==='month');
+    $('fveViewWeek').classList.toggle('active',fveOverviewMode==='week');
+    $('fveViewMonth').setAttribute('aria-pressed',String(fveOverviewMode==='month'));
+    $('fveViewWeek').setAttribute('aria-pressed',String(fveOverviewMode==='week'));
+    renderFveMonthlyOverview();
+  }
+  function renderFveMonthlyOverview() {
+    var records=sortedByDate(weeklyReadings), years=overviewYears(records,'date'), year=setOverviewYearSelect('fveOverviewYear',years);
+    var energy,grid,seen,labels,periodLabel;
+    if(fveOverviewMode==='week') {
+      energy=Array(53).fill(0);grid=Array(53).fill(0);seen=Array(53).fill(false);labels=Array.from({length:53},function(_,i){return 'T'+(i+1)});periodLabel='Týdny s odečtem';
+      records.forEach(function(r){if(Number(r.date.slice(0,4))!==year)return;var inf=isoWeekInfo(r.date);if(!inf||inf.week<1||inf.week>53)return;var q=weeklyDelta(r),idx=inf.week-1;energy[idx]+=Math.max(0,q.energy);grid[idx]+=Math.max(0,q.grid);seen[idx]=true;});
+      $('fveOverviewTitle').textContent='Přehled FVE po týdnech';
+      $('fveOverviewHint').textContent='Týdenní výroba FVE a dokup elektřiny ze sítě podle uložených odečtů. Na konci je součet za vybraný rok.';
+    } else {
+      energy=Array(12).fill(0);grid=Array(12).fill(0);seen=Array(12).fill(false);labels=MN;periodLabel='Měsíce s odečtem';
+      records.forEach(function(r){if(Number(r.date.slice(0,4))!==year)return;var m=Number(r.date.slice(5,7))-1;if(m<0||m>11)return;var q=weeklyDelta(r);energy[m]+=Math.max(0,q.energy);grid[m]+=Math.max(0,q.grid);seen[m]=true;});
+      $('fveOverviewTitle').textContent='Přehled FVE po měsících';
+      $('fveOverviewHint').textContent='Měsíční výroba FVE a dokup elektřiny ze sítě vypočítané z týdenních odečtů. Na konci je součet za vybraný rok.';
+    }
+    var max=Math.max.apply(null,energy.concat(grid))||1,html='';
+    for(var i=0;i<labels.length;i++) html+='<div class="monthly-row"><span class="monthly-label">'+labels[i]+'</span><div class="monthly-bars">'+monthlyBar(energy[i],max,'sun','Výroba')+monthlyBar(grid[i],max,'grid','Dokup')+'</div></div>';
+    $('fveMonthlyChart').innerHTML=html;
+    var totalE=energy.reduce(function(a,b){return a+b},0),totalG=grid.reduce(function(a,b){return a+b},0),count=seen.filter(Boolean).length;
+    $('fveYearTotal').innerHTML='<h3>Celkem za rok '+year+'</h3><div class="year-total-grid"><div>Výroba FVE<strong>'+f1(totalE)+' kWh</strong></div><div>Dokup ze sítě<strong>'+f1(totalG)+' kWh</strong></div><div>'+periodLabel+'<strong>'+count+' / '+labels.length+'</strong></div></div>';
+  }
+  $('meterOverviewYear').addEventListener('change',renderMeterMonthlyOverview);
+  $('fveOverviewYear').addEventListener('change',renderFveMonthlyOverview);
+  $('fveViewMonth').addEventListener('click',function(){setFveOverviewMode('month')});
+  $('fveViewWeek').addEventListener('click',function(){setFveOverviewMode('week')});
+  renderMeterMonthlyOverview();renderFveMonthlyOverview();renderWorkflow();renderWeekCompare();renderMonthCompare();renderYearCompare();updateWorkflowCalc();
 })();
 
 (function () {
