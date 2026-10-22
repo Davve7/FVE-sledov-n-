@@ -70,6 +70,7 @@ h1 .app-icon{width:1.15em;height:1.15em;flex:none;border-radius:.24em}
 .nav button{border:0;background:none;border-radius:14px;padding:7px 4px 6px;font:inherit;font-size:10.5px;font-weight:700;color:var(--muted);cursor:pointer;min-height:54px;padding-left:0;padding-right:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
 .nav button svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .nav button[aria-selected="true"]{background:var(--sunk);color:var(--sun-ink)}
+body[data-tab="Home"] .note.bk{display:none}
 body{padding-bottom:calc(90px + env(safe-area-inset-bottom)) !important}
 .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;background:var(--sunk);border:1px solid var(--line);border-radius:12px;padding:3px;margin:0 0 4px}
 .seg button{border:0;background:none;border-radius:9px;padding:9px 4px;font:inherit;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;min-height:40px}
@@ -500,8 +501,8 @@ details[open] summary { margin-bottom: 10px; }
   <div id="viewCar" class="pane" role="tabpanel" hidden>
     <form class="card" id="carForm" novalidate>
       <h2>Nabíjení auta</h2>
-      <p class="hint">Zadej množství energie z historie nabíjení (např. v aplikaci auta nebo wallboxu). Datum a čas rozlišují jednotlivá nabití.</p>
-      <div class="row"><div class="field"><label for="carDate">Datum</label><input id="carDate" type="date" required></div><div class="field"><label for="carTime">Čas</label><input id="carTime" type="time" required></div></div>
+      <p class="hint">Zadej množství energie z historie nabíjení (např. v aplikaci auta nebo wallboxu). Když nabiješ víckrát za den, zapiš každé nabití zvlášť.</p>
+      <div class="field"><label for="carDate">Den nabití</label><input id="carDate" type="date" required></div>
       <div class="row"><div class="field"><label for="carKwh">Nabito (kWh)</label><input id="carKwh" type="number" min="0" step="any" inputmode="decimal" required></div><div class="field"><label for="carPrice">Cena (Kč/kWh)</label><input id="carPrice" type="number" min="0" step="0.01" inputmode="decimal"></div></div>
       <p class="hint">Cena se předvyplní z posledního nabití. Pokud nabíjíš z FVE zdarma, zadej 0.</p>
       <p class="calc" id="carCalc">Náklady: –</p>
@@ -1384,10 +1385,14 @@ details[open] summary { margin-bottom: 10px; }
   function meterDelta(rec){var prior=sortedByDate(meterReadings).filter(function(x){return x.date<rec.date}).slice(-1)[0];var svt=isFinite(rec.startVT)?rec.startVT:(prior?prior.vt:0),snt=isFinite(rec.startNT)?rec.startNT:(prior?prior.nt:0);if(rec.replaced){return {vt:(rec.oldVT-svt)+(rec.vt-rec.newVT),nt:(rec.oldNT-snt)+(rec.nt-rec.newNT),prior:prior}}return {vt:rec.vt-svt,nt:rec.nt-snt,prior:prior}}
   function fmtMoney(n){return n.toLocaleString('cs-CZ',{minimumFractionDigits:2,maximumFractionDigits:2})+' Kč'}
   function persistWorkflow(){store.set('fveWeeklyReadings',JSON.stringify(weeklyReadings));store.set('fveMeterReadings',JSON.stringify(meterReadings));store.set('fvePriceHistory',JSON.stringify(priceHistory));store.set('fveChargeReadings',JSON.stringify(chargeReadings));try{scheduleSync()}catch(err){say('syncStatus','Odečet je uložen místně, synchronizace se nepodařila: '+(err.message||'chyba'),true)}}
+  var showAll={w:false,m:false};
+  document.addEventListener('click',function(ev){var b=ev.target.closest&&ev.target.closest('[data-more]');if(!b)return;var k=b.getAttribute('data-more');showAll[k]=!showAll[k];renderWorkflow()});
   function renderWorkflow(){
     var ws=sortedByDate(weeklyReadings),ms=sortedByDate(meterReadings);
-    $('weeklyList').innerHTML=ws.slice().reverse().map(function(x){var q=weeklyDelta(x);return '<div class="workflow-item"><strong>'+dateText(x.date)+'</strong>FVE: '+f1(x.energy)+' kWh (+'+f1(q.energy)+' za období) · Dokup: '+f1(x.grid)+' kWh (+'+f1(q.grid)+')<div class="workflow-actions"><button type="button" data-reading-action="edit-weekly" data-date="'+x.date+'">Upravit</button><button type="button" class="delete" data-reading-action="delete-weekly" data-date="'+x.date+'">Smazat</button></div></div>'}).join('')||'<p class="hint">Zatím žádné týdenní odečty.</p>';
-    $('meterList').innerHTML=ms.slice().reverse().map(function(x){var q=meterDelta(x),cost=Math.max(0,q.vt)*x.priceVT+Math.max(0,q.nt)*x.priceNT;return '<div class="workflow-item"><strong>'+dateText(x.date)+(x.replaced?' · výměna elektroměru':'')+'</strong>VT: '+f1(q.vt)+' kWh · NT: '+f1(q.nt)+' kWh · Náklady: '+fmtMoney(cost)+'<div class="workflow-actions"><button type="button" data-reading-action="edit-meter" data-date="'+x.date+'">Upravit</button><button type="button" class="delete" data-reading-action="delete-meter" data-date="'+x.date+'">Smazat</button></div></div>'}).join('')||'<p class="hint">Zatím žádné měsíční odečty.</p>';
+    $('weeklyList').innerHTML=ws.slice().reverse().slice(0,showAll.w?99999:8).map(function(x){var q=weeklyDelta(x);return '<div class="workflow-item"><strong>'+dateText(x.date)+'</strong>FVE: '+f1(x.energy)+' kWh (+'+f1(q.energy)+' za období) · Dokup: '+f1(x.grid)+' kWh (+'+f1(q.grid)+')<div class="workflow-actions"><button type="button" data-reading-action="edit-weekly" data-date="'+x.date+'">Upravit</button><button type="button" class="delete" data-reading-action="delete-weekly" data-date="'+x.date+'">Smazat</button></div></div>'}).join('')||'<p class="hint">Zatím žádné týdenní odečty.</p>';
+    $('meterList').innerHTML=ms.slice().reverse().slice(0,showAll.m?99999:8).map(function(x){var q=meterDelta(x),cost=Math.max(0,q.vt)*x.priceVT+Math.max(0,q.nt)*x.priceNT;return '<div class="workflow-item"><strong>'+dateText(x.date)+(x.replaced?' · výměna elektroměru':'')+'</strong>VT: '+f1(q.vt)+' kWh · NT: '+f1(q.nt)+' kWh · Náklady: '+fmtMoney(cost)+'<div class="workflow-actions"><button type="button" data-reading-action="edit-meter" data-date="'+x.date+'">Upravit</button><button type="button" class="delete" data-reading-action="delete-meter" data-date="'+x.date+'">Smazat</button></div></div>'}).join('')||'<p class="hint">Zatím žádné měsíční odečty.</p>';
+    if(ws.length>8)$('weeklyList').insertAdjacentHTML('beforeend','<button type="button" class="btn ghost" data-more="w">'+(showAll.w?'Zobrazit méně':'Zobrazit všech '+ws.length)+'</button>');
+    if(ms.length>8)$('meterList').insertAdjacentHTML('beforeend','<button type="button" class="btn ghost" data-more="m">'+(showAll.m?'Zobrazit méně':'Zobrazit všech '+ms.length)+'</button>');
     renderNotes();renderStats();renderYearDashboard();renderMeterMonthlyOverview();renderFveMonthlyOverview();renderExtras();
   }
   function setField(id,value){$(id).value=value==null?'':value}
@@ -1479,7 +1484,7 @@ details[open] summary { margin-bottom: 10px; }
   function setNav(name){
     if(NAVS.indexOf(name)<0)name='Home';
     NAVS.forEach(function(k){var on=k===name;$('nav'+k).setAttribute('aria-selected',String(on));$('view'+k).hidden=!on});
-    store.set('fveTab',name);
+    store.set('fveTab',name);document.body.setAttribute('data-tab',name);
     window.scrollTo(0,0);
   }
   NAVS.forEach(function(k){$('nav'+k).addEventListener('click',function(){setNav(k)})});
@@ -1493,7 +1498,7 @@ details[open] summary { margin-bottom: 10px; }
     var days=last?Math.floor((Date.now()-last)/86400000):null;
     if(last&&days<30)return '';
     var msg=last?'Poslední záloha nebo synchronizace byla před '+(days===1?'1 dnem':days+' dny')+'.':'Zatím jste data nezálohoval ani nesynchronizoval.';
-    return '<div class="note warn"><b>Udělejte zálohu.</b> '+msg+' Data jsou uložená jen v tomto zařízení. <button type="button" class="mini" data-act="backup-now">Zálohovat teď</button></div>';
+    return '<div class="note warn bk"><b>Udělejte zálohu.</b> '+msg+' Data jsou uložená jen v tomto zařízení. <button type="button" class="mini" data-act="backup-now">Zálohovat teď</button></div>';
   }
   $('notes').addEventListener('click',function(ev){if(!ev.target.closest('[data-act="backup-now"]'))return;setNav('Backup');$('downloadJson').click()});
 
@@ -1707,20 +1712,19 @@ details[open] summary { margin-bottom: 10px; }
   ['carKwh','carPrice'].forEach(function(i){$(i).addEventListener('input',carCalc)});
   function resetCarForm(){
     var now=new Date(),pad=function(x){return String(x).padStart(2,'0')};
-    $('carDate').value=now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate());$('carTime').value=pad(now.getHours())+':'+pad(now.getMinutes());
+    $('carDate').value=now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate());
     $('carKwh').value='';var last=carRows().slice(-1)[0],lp=store.get('fveChargePrice');$('carPrice').value=last&&last.price!=null?String(last.price):(lp!=null&&lp!==''?lp:'');
     editingCar=null;$('carSave').textContent='Uložit nabití';carCalc();
   }
   $('carForm').addEventListener('submit',function(ev){
     ev.preventDefault();var st=$('carStatus');
-    var dd=$('carDate').value,tt=$('carTime').value,k=numVal('carKwh'),p=numVal('carPrice');if(!Number.isFinite(p))p=0;
-    if(!dd||!tt||!Number.isFinite(k)||k<=0||k>1000||p<0){st.textContent='Zkontroluj datum, čas, množství (větší než 0) a cenu.';st.className='status bad';return}
-    if(k>150&&window.__okKey!=='c'+dd+tt+k){window.__okKey='c'+dd+tt+k;st.textContent='Nabito '+f1(k)+' kWh je neobvykle hodně na jedno nabití. Pokud je to správně, stiskni Uložit ještě jednou.';st.className='status bad';return}
+    var dd=$('carDate').value,k=numVal('carKwh'),p=numVal('carPrice');if(!Number.isFinite(p))p=0;
+    if(!dd||!Number.isFinite(k)||k<=0||k>1000||p<0){st.textContent='Zkontroluj den, množství (větší než 0) a cenu.';st.className='status bad';return}
+    if(k>150&&window.__okKey!=='c'+dd+k){window.__okKey='c'+dd+k;st.textContent='Nabito '+f1(k)+' kWh je neobvykle hodně na jedno nabití. Pokud je to správně, stiskni Uložit ještě jednou.';st.className='status bad';return}
     window.__okKey=null;
-    var key=dd+' '+tt,stamp=Date.now();
+    var stamp=Date.now(),key;
+    if(editingCar&&editingCar.slice(0,10)===dd)key=editingCar;else{var slot=0;while(chargeReadings.some(function(x){return x.date===dd+' '+String(Math.floor(slot/60)).padStart(2,'0')+':'+String(slot%60).padStart(2,'0')}))slot++;key=dd+' '+String(Math.floor(slot/60)).padStart(2,'0')+':'+String(slot%60).padStart(2,'0')}
     if(editingCar&&editingCar!==key){var oi=chargeReadings.findIndex(function(x){return x.date===editingCar&&!x._deleted});if(oi>=0)chargeReadings[oi]={date:editingCar,_deleted:true,updatedAt:stamp}}
-    var ex=chargeReadings.findIndex(function(x){return x.date===key&&!x._deleted});
-    if(ex>=0&&editingCar!==key){st.textContent='V tento čas už je nabití zapsané. Změň čas nebo upravit existující záznam.';st.className='status bad';return}
     var rec={date:key,kwh:k,price:p,updatedAt:stamp},i=chargeReadings.findIndex(function(x){return x.date===key});
     if(i>=0)chargeReadings[i]=rec;else chargeReadings.push(rec);
     store.set('fveChargeReadings',JSON.stringify(chargeReadings));store.set('fveChargePrice',String(p));
@@ -1730,10 +1734,10 @@ details[open] summary { margin-bottom: 10px; }
   $('carList').addEventListener('click',function(ev){
     var b=ev.target.closest('[data-car]');if(!b)return;var key=b.getAttribute('data-car'),act=b.getAttribute('data-act2');
     var r=chargeReadings.find(function(x){return x.date===key&&!x._deleted});if(!r)return;
-    if(act==='del'){if(!window.confirm('Smazat nabití '+key.replace(' ',' v ')+' ('+f1(r.kwh)+' kWh)?'))return;
+    if(act==='del'){if(!window.confirm('Smazat nabití '+key.slice(0,10)+' ('+f1(r.kwh)+' kWh)?'))return;
       chargeReadings[chargeReadings.indexOf(r)]={date:key,_deleted:true,updatedAt:Date.now()};
       store.set('fveChargeReadings',JSON.stringify(chargeReadings));renderCar();renderStats();try{scheduleSync()}catch(e){}}
-    else{editingCar=key;$('carDate').value=key.slice(0,10);$('carTime').value=key.slice(11);$('carKwh').value=String(r.kwh);$('carPrice').value=String(r.price||0);$('carSave').textContent='Uložit změnu';carCalc();window.scrollTo(0,0)}
+    else{editingCar=key;$('carDate').value=key.slice(0,10);$('carKwh').value=String(r.kwh);$('carPrice').value=String(r.price||0);$('carSave').textContent='Uložit změnu';carCalc();window.scrollTo(0,0)}
   });
   function renderCar(){
     var rows=carRows(),now=new Date(),cm=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0'),pm=new Date(now.getFullYear(),now.getMonth()-1,1),pk=pm.getFullYear()+'-'+String(pm.getMonth()+1).padStart(2,'0');
@@ -1748,7 +1752,7 @@ details[open] summary { margin-bottom: 10px; }
     for(var m=1;m<=12;m++){var t=0;rows.forEach(function(r){if(Number(r.date.slice(0,4))===yr&&Number(r.date.slice(5,7))===m)t+=r.kwh});gs.push([t]);mx=Math.max(mx,t)}
     $('carChartYear').textContent=String(yr);$('carChart').innerHTML=mx>0?barChart(gs,niceMax(mx)):'<p class="hint">Graf se zobrazí po prvním nabití.</p>';
     var list=rows.slice().reverse().slice(0,40);
-    $('carList').innerHTML=list.length?list.map(function(r){var p=r.date.split(' ')[0].split('-');return '<div class="workflow-item"><div><strong>'+Number(p[2])+'. '+Number(p[1])+'. '+p[0]+' '+r.date.slice(11)+'</strong><br><span class="hint">'+f1(r.kwh)+' kWh · '+f2(carCost(r))+' Kč ('+f2(Number(r.price)||0)+' Kč/kWh)</span></div><div class="workflow-actions"><button type="button" data-car="'+r.date+'" data-act2="edit">Upravit</button><button type="button" class="delete" data-car="'+r.date+'" data-act2="del">Smazat</button></div></div>'}).join(''):'<p class="hint">Žádné záznamy.</p>';
+    $('carList').innerHTML=list.length?list.map(function(r){var p=r.date.split(' ')[0].split('-');return '<div class="workflow-item"><div><strong>'+Number(p[2])+'. '+Number(p[1])+'. '+p[0]+'</strong><br><span class="hint">'+f1(r.kwh)+' kWh · '+f2(carCost(r))+' Kč ('+f2(Number(r.price)||0)+' Kč/kWh)</span></div><div class="workflow-actions"><button type="button" data-car="'+r.date+'" data-act2="edit">Upravit</button><button type="button" class="delete" data-car="'+r.date+'" data-act2="del">Smazat</button></div></div>'}).join(''):'<p class="hint">Žádné záznamy.</p>';
     var st=carStatsFor(store.get('fvePeriod')==='cur'?now.getFullYear():store.get('fvePeriod')==='prev'?now.getFullYear()-1:0);
     $('sCar').textContent=f1(st.k)+' kWh';$('sCarK').textContent='Náklady: '+kc(st.c);
   }
