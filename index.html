@@ -397,11 +397,6 @@ details[open] summary { margin-bottom: 10px; }
       <div class="btnrow"><button type="button" class="btn ghost" id="stBackup">Zálohovat teď</button><button type="button" class="btn ghost" id="stEnter">Zadat odečet</button></div>
     </section>
     <div class="seg" id="periodSeg" role="group" aria-label="Období souhrnu"><button type="button" data-per="all">Celá historie</button><button type="button" data-per="cur">Tento rok</button><button type="button" data-per="prev">Loňský rok</button></div>
-    <section class="card" id="alertsCard" aria-labelledby="alertsTitle">
-      <div class="chead"><h2 id="alertsTitle">Upozornění</h2><label for="alertPct">Hranice <select id="alertPct" aria-label="Hranice odchylky proti loňsku"><option value="20">20 %</option><option value="30">30 %</option><option value="50">50 %</option></select></label></div>
-      <p class="hint">Porovnání posledních 12 uzavřených měsíců se stejnými měsíci loni: výroba FVE, dokup ze sítě a spotřeba elektroměru.</p>
-      <div id="alertsOut"></div>
-    </section>
     <section class="stats" aria-label="Souhrn za celou historii">
     <div class="stat"><span class="k">Vyrobeno (slunce)</span><span class="v c-sun" id="sTot">0,0 kWh</span><span class="m c-save" id="sTotK">Úspora: 0,0 Kč</span></div>
     <div class="stat"><span class="k">Dokoupeno (síť)</span><span class="v c-grid" id="sGrid">0,0 kWh</span><span class="m c-cost" id="sGridK">Náklady: 0,0 Kč</span></div>
@@ -417,6 +412,11 @@ details[open] summary { margin-bottom: 10px; }
       <h2 id="paybackTitle">Návratnost FVE</h2>
       <div class="field"><label for="investInput">Cena instalace FVE (Kč)</label><input id="investInput" type="number" min="0" step="1000" inputmode="numeric" placeholder="např. 250000"></div>
       <div id="paybackOut"></div>
+    </section>
+    <section class="card" id="alertsCard" aria-labelledby="alertsTitle">
+      <div class="chead"><h2 id="alertsTitle">Upozornění</h2><label for="alertPct">Hranice <select id="alertPct" aria-label="Hranice odchylky proti loňsku"><option value="20">20 %</option><option value="30">30 %</option><option value="50">50 %</option></select></label></div>
+      <p class="hint">Porovnání posledních 12 uzavřených měsíců se stejnými měsíci loni: výroba FVE, dokup ze sítě a spotřeba elektroměru.</p>
+      <div id="alertsOut"></div>
     </section>
   </div>
 
