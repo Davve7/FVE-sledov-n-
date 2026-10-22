@@ -1,7 +1,7 @@
 {
-  "name": "FVE sledování",
-  "short_name": "FVE",
-  "description": "Sledování výroby FVE, dokupu ze sítě a elektroměru VT/NT",
+  "name": "Sledování elektřiny",
+  "short_name": "Elektřina",
+  "description": "Výroba FVE, dokup ze sítě, elektroměr VT/NT a nabíjení auta",
   "lang": "cs",
   "start_url": "./index.html",
   "scope": "./",
