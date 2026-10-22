@@ -71,6 +71,15 @@ h1 .app-icon{width:1.15em;height:1.15em;flex:none;border-radius:.24em}
 .nav button svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .nav button[aria-selected="true"]{background:var(--sunk);color:var(--sun-ink)}
 body{padding-bottom:calc(90px + env(safe-area-inset-bottom)) !important}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;background:var(--sunk);border:1px solid var(--line);border-radius:12px;padding:3px;margin:0 0 4px}
+.seg button{border:0;background:none;border-radius:9px;padding:9px 4px;font:inherit;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;min-height:40px}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--sun-ink);box-shadow:0 1px 2px rgba(0,0,0,.18)}
+.st-row{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.st-row:last-child{border-bottom:0}.st-row span:first-child{color:var(--muted)}.st-row b{text-align:right}
+.st-ok{color:var(--save)}.st-warn{color:var(--cost)}
+.chart svg{width:100%;height:auto;display:block}.chart text{fill:var(--muted);font-size:9px;font-family:inherit}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+
 @media(min-width:760px){.nav{max-width:520px;left:50%;right:auto;transform:translateX(-50%);border-radius:18px 18px 0 0;border:1px solid var(--line);border-bottom:0}}
 </style>
 <title>FVE sledování</title>
@@ -382,6 +391,12 @@ details[open] summary { margin-bottom: 10px; }
   </div>
 
   <div id="viewHome" class="pane" role="tabpanel" hidden>
+    <section class="card" id="statusCard" aria-labelledby="statusTitle">
+      <h2 id="statusTitle">Stav dat</h2>
+      <div id="statusOut"></div>
+      <div class="btnrow"><button type="button" class="btn ghost" id="stBackup">Zálohovat teď</button><button type="button" class="btn ghost" id="stEnter">Zadat odečet</button></div>
+    </section>
+    <div class="seg" id="periodSeg" role="group" aria-label="Období souhrnu"><button type="button" data-per="all">Celá historie</button><button type="button" data-per="cur">Tento rok</button><button type="button" data-per="prev">Loňský rok</button></div>
     <section class="card" id="alertsCard" aria-labelledby="alertsTitle">
       <div class="chead"><h2 id="alertsTitle">Upozornění</h2><label for="alertPct">Hranice <select id="alertPct" aria-label="Hranice odchylky proti loňsku"><option value="20">20 %</option><option value="30">30 %</option><option value="50">50 %</option></select></label></div>
       <p class="hint">Porovnání posledních 12 uzavřených měsíců se stejnými měsíci loni: výroba FVE, dokup ze sítě a spotřeba elektroměru.</p>
@@ -406,6 +421,8 @@ details[open] summary { margin-bottom: 10px; }
   </div>
 
   <div id="viewMeter" class="pane" role="tabpanel" hidden>
+    <section class="card" aria-labelledby="meterChartTitle"><div class="chead"><h2 id="meterChartTitle">Spotřeba elektroměru</h2><span id="meterChartYear" class="hint"></span></div>
+      <div class="legend"><span><i style="background:var(--sun)"></i>VT</span><span><i style="background:var(--grid)"></i>NT</span></div><div id="meterChart"></div><p class="hint" id="meterChartNote"></p></section>
     <section class="monthly-overviews" aria-label="Elektroměr">
     <section class="card monthly-card" aria-labelledby="meterOverviewTitle">
       <div class="chead"><h2 id="meterOverviewTitle">Přehled po měsících</h2><label for="meterOverviewYear">Rok <select id="meterOverviewYear" aria-label="Rok elektroměru"></select></label></div>
@@ -418,6 +435,8 @@ details[open] summary { margin-bottom: 10px; }
   </div>
 
   <div id="viewFve" class="pane" role="tabpanel" hidden>
+    <section class="card" aria-labelledby="fveChartTitle"><div class="chead"><h2 id="fveChartTitle">Výroba po měsících</h2></div>
+      <div class="legend"><span><i style="background:var(--sun)"></i><b id="fveChartCur">—</b></span><span><i style="background:var(--muted);opacity:.55"></i><b id="fveChartPrev">—</b></span></div><div id="fveChart"></div><p class="hint">Výroba FVE v kWh. Chybějící měsíce nejsou zaznamenané.</p></section>
     <section class="monthly-overviews" aria-label="FVE">
     <section class="card monthly-card" aria-labelledby="fveOverviewTitle">
       <div class="chead"><h2 id="fveOverviewTitle">Přehled FVE</h2><label for="fveOverviewYear">Rok <select id="fveOverviewYear" aria-label="Rok FVE"></select></label></div>
@@ -512,6 +531,8 @@ details[open] summary { margin-bottom: 10px; }
           <button type="button" class="btn" id="copyBackup">Zkopírovat zálohu</button>
           <button type="button" class="btn ghost" id="downloadJson">Stáhnout JSON zálohu</button>
           <button type="button" class="btn ghost" id="exportCsv">Exportovat CSV</button>
+          <button type="button" class="btn ghost" id="exportMonthly">Export po měsících (Excel)</button>
+          <button type="button" class="btn ghost" id="addReminder">Přidat připomínku do kalendáře</button>
           <button type="button" class="btn ghost" id="doImport">Načíst data</button>
         </div>
         <div class="field">
@@ -610,8 +631,10 @@ details[open] summary { margin-bottom: 10px; }
   }
 
   function renderStats() {
+    var per = store.get('fvePeriod') || 'all', yr = per === 'cur' ? new Date().getFullYear() : per === 'prev' ? new Date().getFullYear() - 1 : 0;
     var v = V(), tE = 0, tG = 0, tS = 0, tC = 0, covered = {};
     v.forEach(function (x) {
+      if (yr && x.year !== yr) return;
       var k = x.year + '-' + x.month; covered[k] = true;
       tE += x.energy; tG += x.grid; tS += x.energy * x.savedPrice; tC += gridCost(x);
     });
@@ -622,6 +645,7 @@ details[open] summary { margin-bottom: 10px; }
     ws.forEach(function (x) { years[Number(x.date.slice(0,4))] = true; });
     Object.keys(years).forEach(function (ys) {
       var year = Number(ys);
+      if (yr && year !== yr) return;
       for (var mo = 1; mo <= 12; mo++) {
         if (covered[year + '-' + mo]) continue;
         var q = weeklyPeriodTotals(year, mo);
@@ -1365,9 +1389,9 @@ details[open] summary { margin-bottom: 10px; }
   $('weeklyDate').addEventListener('change',suggestStarts);$('meterDate').addEventListener('change',suggestStarts);
   var today=new Date(),todayStr=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
   var gpStored=parseFloat(store.get('fveGridPrice'));if(Number.isFinite(gpStored)&&gpStored>=0)$('weeklyGridPrice').value=String(gpStored);$('weeklyDate').value=todayStr;$('meterDate').value=todayStr;if(window.__syncWeeklyCalendarLabel)window.__syncWeeklyCalendarLabel();if(window.__syncMeterCalendarLabel)window.__syncMeterCalendarLabel();suggestStarts();
-  function saveWeeklyReading(ev){if(ev){ev.preventDefault();ev.stopPropagation()}var status=$('weeklyStatus');try{var date=$('weeklyDate').value,es=numVal('weeklyEnergyStart'),e=numVal('weeklyEnergy'),gs=numVal('weeklyGridStart'),g=numVal('weeklyGrid'),price=numVal('kwPrice'),gp=numVal('weeklyGridPrice');if(Number.isFinite(gp)&&gp<0){status.textContent='Cena dokupu nesmí být záporná.';status.className='status bad';return}var movedFrom=editingWeeklyDate&&editingWeeklyDate!==date?editingWeeklyDate:null;var allWeeks=sortedByDate(weeklyReadings).filter(function(x){return !movedFrom||x.date!==movedFrom});if(movedFrom&&allWeeks.some(function(x){return x.date===date})){status.textContent='Na zvolené datum už odečet existuje. Nejprve uprav záznam, který má toto datum.';status.className='status bad';return}var prior=allWeeks.filter(function(x){return x.date<date&&x.date.slice(0,4)===date.slice(0,4)}).slice(-1)[0],next=allWeeks.filter(function(x){return x.date>date&&x.date.slice(0,4)===date.slice(0,4)}).slice(0,1)[0];if(!date||![es,e,gs,g,price].every(function(n){return Number.isFinite(n)&&n>=0})||e<es||g<gs||(prior&&(Math.abs(es-prior.energy)>1e-9||Math.abs(gs-prior.grid)>1e-9))||(next&&(e>next.energy+1e-9||g>next.grid+1e-9))){status.textContent='Zkontroluj datum, cenu a návaznost stavů. Počáteční stav musí navazovat na předchozí odečet a konečný stav nesmí překročit pozdější odečet.';status.className='status bad';return}if(prior&&e===es&&g===gs){status.textContent='Konečné stavy jsou stejné jako počáteční. Zadej nové stavy čítačů.';status.className='status bad';return}var stamp=Date.now(),oldYear=null,oldBaseline=null;if(movedFrom){var oldIdx=weeklyReadings.findIndex(function(x){return x.date===movedFrom&&!x._deleted});if(oldIdx>=0){var oldRec=Object.assign({},weeklyReadings[oldIdx]),oldPrev=sortedByDate(weeklyReadings).filter(function(x){return x.date<movedFrom&&x.date.slice(0,4)===movedFrom.slice(0,4)}).slice(-1)[0];oldYear=movedFrom.slice(0,4);if(!oldPrev)oldBaseline={energyStart:oldRec.energyStart,gridStart:oldRec.gridStart};weeklyReadings[oldIdx]={date:movedFrom,_deleted:true,updatedAt:stamp};}}var rec={date:date,energyStart:es,energy:e,gridStart:gs,grid:g,price:price,updatedAt:stamp};if(Number.isFinite(gp)){rec.gridPrice=gp;store.set('fveGridPrice',String(gp))}var same=weeklyReadings.findIndex(function(x){return x.date===date});if(same>=0)weeklyReadings[same]=rec;else weeklyReadings.push(rec);reconcileWeeklyStarts(date.slice(0,4));if(oldYear&&oldYear!==date.slice(0,4))reconcileWeeklyStarts(oldYear,oldBaseline);else if(oldBaseline)reconcileWeeklyStarts(date.slice(0,4),oldBaseline);editingWeeklyDate=null;store.set('fveWeeklyReadings',JSON.stringify(weeklyReadings));var active=weeklyReadings.find(function(x){return x.date===date&&!x._deleted}),q=weeklyDelta(active||rec);renderWorkflow();renderWeekCompare();renderMonthCompare();renderYearCompare();status.textContent='Uloženo. Přírůstek: FVE '+f1(q.energy)+' kWh, dokup '+f1(q.grid)+' kWh.'+(storageOk?'':' Pozor: prohlížeč nepovolil místní uložení.');status.className='status';advanceWeekly();updateWorkflowCalc();try{scheduleSync()}catch(syncErr){say('syncStatus','Odečet je uložen v tomto zařízení; synchronizace se nezdařila: '+(syncErr.message||'chyba'),true)}}catch(err){status.textContent='Odečet se nepodařilo uložit: '+(err&&err.message?err.message:String(err));status.className='status bad';}}
+  function saveWeeklyReading(ev){if(ev){ev.preventDefault();ev.stopPropagation()}var status=$('weeklyStatus');try{var date=$('weeklyDate').value,es=numVal('weeklyEnergyStart'),e=numVal('weeklyEnergy'),gs=numVal('weeklyGridStart'),g=numVal('weeklyGrid'),price=numVal('kwPrice'),gp=numVal('weeklyGridPrice');if(Number.isFinite(gp)&&gp<0){status.textContent='Cena dokupu nesmí být záporná.';status.className='status bad';return}var movedFrom=editingWeeklyDate&&editingWeeklyDate!==date?editingWeeklyDate:null;var allWeeks=sortedByDate(weeklyReadings).filter(function(x){return !movedFrom||x.date!==movedFrom});if(movedFrom&&allWeeks.some(function(x){return x.date===date})){status.textContent='Na zvolené datum už odečet existuje. Nejprve uprav záznam, který má toto datum.';status.className='status bad';return}var prior=allWeeks.filter(function(x){return x.date<date&&x.date.slice(0,4)===date.slice(0,4)}).slice(-1)[0],next=allWeeks.filter(function(x){return x.date>date&&x.date.slice(0,4)===date.slice(0,4)}).slice(0,1)[0];if(!date||![es,e,gs,g,price].every(function(n){return Number.isFinite(n)&&n>=0})||e<es||g<gs||(prior&&(Math.abs(es-prior.energy)>1e-9||Math.abs(gs-prior.grid)>1e-9))||(next&&(e>next.energy+1e-9||g>next.grid+1e-9))){status.textContent='Zkontroluj datum, cenu a návaznost stavů. Počáteční stav musí navazovat na předchozí odečet a konečný stav nesmí překročit pozdější odečet.';status.className='status bad';return}if(prior&&e===es&&g===gs){status.textContent='Konečné stavy jsou stejné jako počáteční. Zadej nové stavy čítačů.';status.className='status bad';return}var wk=allWeeks.filter(function(x){return x.date!==date}).map(function(x){return weeklyDelta(x)}).filter(function(q){return q.energy>0}),wkey='w'+date+'|'+e+'|'+g;if(wk.length>=3&&window.__okKey!==wkey){var aE=wk.reduce(function(a,q){return a+q.energy},0)/wk.length,aG=wk.reduce(function(a,q){return a+q.grid},0)/wk.length,iE=e-es,iG=g-gs,hiE=iE>3*aE&&iE-aE>20,hiG=aG>0&&iG>3*aG&&iG-aG>20;if(hiE||hiG){window.__okKey=wkey;status.textContent='Neobvyklá hodnota: '+(hiE?'výroba '+f1(iE)+' kWh (běžně kolem '+f1(aE)+') ':'')+(hiG?'dokup '+f1(iG)+' kWh (běžně kolem '+f1(aG)+') ':'')+'– zkontroluj překlep. Pokud je to správně, stiskni Uložit ještě jednou.';status.className='status bad';return}}window.__okKey=null;var stamp=Date.now(),oldYear=null,oldBaseline=null;if(movedFrom){var oldIdx=weeklyReadings.findIndex(function(x){return x.date===movedFrom&&!x._deleted});if(oldIdx>=0){var oldRec=Object.assign({},weeklyReadings[oldIdx]),oldPrev=sortedByDate(weeklyReadings).filter(function(x){return x.date<movedFrom&&x.date.slice(0,4)===movedFrom.slice(0,4)}).slice(-1)[0];oldYear=movedFrom.slice(0,4);if(!oldPrev)oldBaseline={energyStart:oldRec.energyStart,gridStart:oldRec.gridStart};weeklyReadings[oldIdx]={date:movedFrom,_deleted:true,updatedAt:stamp};}}var rec={date:date,energyStart:es,energy:e,gridStart:gs,grid:g,price:price,updatedAt:stamp};if(Number.isFinite(gp)){rec.gridPrice=gp;store.set('fveGridPrice',String(gp))}var same=weeklyReadings.findIndex(function(x){return x.date===date});if(same>=0)weeklyReadings[same]=rec;else weeklyReadings.push(rec);reconcileWeeklyStarts(date.slice(0,4));if(oldYear&&oldYear!==date.slice(0,4))reconcileWeeklyStarts(oldYear,oldBaseline);else if(oldBaseline)reconcileWeeklyStarts(date.slice(0,4),oldBaseline);editingWeeklyDate=null;store.set('fveWeeklyReadings',JSON.stringify(weeklyReadings));var active=weeklyReadings.find(function(x){return x.date===date&&!x._deleted}),q=weeklyDelta(active||rec);renderWorkflow();renderWeekCompare();renderMonthCompare();renderYearCompare();status.textContent='Uloženo. Přírůstek: FVE '+f1(q.energy)+' kWh, dokup '+f1(q.grid)+' kWh.'+(storageOk?'':' Pozor: prohlížeč nepovolil místní uložení.');status.className='status';advanceWeekly();updateWorkflowCalc();try{scheduleSync()}catch(syncErr){say('syncStatus','Odečet je uložen v tomto zařízení; synchronizace se nezdařila: '+(syncErr.message||'chyba'),true)}}catch(err){status.textContent='Odečet se nepodařilo uložit: '+(err&&err.message?err.message:String(err));status.className='status bad';}}
   $('weeklyForm').addEventListener('submit',saveWeeklyReading);
-  function saveMeterReading(ev){if(ev){ev.preventDefault();ev.stopPropagation()}var status=$('meterStatus');try{var date=$('meterDate').value,svt=numVal('meterStartVT'),snt=numVal('meterStartNT'),vt=numVal('meterVT'),nt=numVal('meterNT'),pv=numVal('meterPriceVT'),pn=numVal('meterPriceNT'),rep=$('meterReplace').checked;var movedFrom=editingMeterDate&&editingMeterDate!==date?editingMeterDate:null;var allMeters=sortedByDate(meterReadings).filter(function(x){return !movedFrom||x.date!==movedFrom});if(movedFrom&&allMeters.some(function(x){return x.date===date})){status.textContent='Na zvolené datum už odečet elektroměru existuje. Nejprve uprav záznam, který má toto datum.';status.className='status bad';return}var prior=allMeters.filter(function(x){return x.date<date}).slice(-1)[0],next=allMeters.filter(function(x){return x.date>date}).slice(0,1)[0];if(movedFrom){var oldBeingMoved=meterReadings.find(function(x){return x.date===movedFrom&&!x._deleted});if(oldBeingMoved&&oldBeingMoved.replaced&&allMeters.some(function(x){return x.date>movedFrom})){status.textContent='Datum záznamu s výměnou elektroměru nelze změnit, protože na něj navazují další odečty.';status.className='status bad';return}}var nextVT=next?(next.replaced?next.oldVT:next.vt):null,nextNT=next?(next.replaced?next.oldNT:next.nt):null;if(!date||![svt,snt,vt,nt,pv,pn].every(function(n){return Number.isFinite(n)&&n>=0})||(!rep&&(vt<svt||nt<snt||(prior&&(Math.abs(svt-prior.vt)>1e-9||Math.abs(snt-prior.nt)>1e-9))))||(rep&&prior&&(Math.abs(svt-prior.vt)>1e-9||Math.abs(snt-prior.nt)>1e-9))||(next&&(vt>nextVT+1e-9||nt>nextNT+1e-9))){status.textContent='Zkontroluj počáteční a konečné stavy VT/NT a ceny. Počáteční stavy musí navazovat na předchozí odečet a konečné nesmí překročit pozdější odečet.';status.className='status bad';return}var rec={date:date,startVT:svt,startNT:snt,vt:vt,nt:nt,priceVT:pv,priceNT:pn,replaced:rep,updatedAt:Date.now()};if(rep){rec.oldVT=numVal('oldVT');rec.oldNT=numVal('oldNT');rec.newVT=numVal('newVT');rec.newNT=numVal('newNT');if(![rec.oldVT,rec.oldNT,rec.newVT,rec.newNT].every(function(n){return Number.isFinite(n)&&n>=0})||rec.oldVT<svt||rec.oldNT<snt||vt<rec.newVT||nt<rec.newNT||(prior&&(rec.oldVT<prior.vt-1e-9||rec.oldNT<prior.nt-1e-9))){status.textContent='Při výměně zkontroluj konečné stavy starého elektroměru, počáteční a aktuální stavy nového elektroměru i návaznost na předchozí odečet.';status.className='status bad';return}}var stamp=Date.now(),oldYearBaseline=null,oldIndex=-1;if(movedFrom){oldIndex=meterReadings.findIndex(function(x){return x.date===movedFrom&&!x._deleted});if(oldIndex>=0){var oldRec=Object.assign({},meterReadings[oldIndex]),oldPrev=sortedByDate(meterReadings).filter(function(x){return x.date<movedFrom}).slice(-1)[0];if(!oldPrev)oldYearBaseline={startVT:oldRec.startVT,startNT:oldRec.startNT};meterReadings[oldIndex]={date:movedFrom,_deleted:true,updatedAt:stamp};}}rec.updatedAt=stamp;var same=meterReadings.findIndex(function(x){return x.date===date});if(same>=0)meterReadings[same]=rec;else meterReadings.push(rec);reconcileMeterStarts();if(oldYearBaseline&&movedFrom)reconcileMeterStarts(oldYearBaseline);editingMeterDate=null;store.set('fveMeterReadings',JSON.stringify(meterReadings));var active=meterReadings.find(function(x){return x.date===date&&!x._deleted}),q=meterDelta(active||rec),cost=Math.max(0,q.vt)*pv+Math.max(0,q.nt)*pn;/* Po uložení další záznam nezačínej v režimu výměny: zabrání to nechtěnému dvojímu započtení výměny v dalším měsíci. */$('meterReplace').checked=false;$('replaceFields').hidden=true;['meterStartVT','meterVT','meterStartNT','meterNT','oldVT','oldNT','newVT','newNT'].forEach(function(id){$(id).value=''});renderWorkflow();status.textContent='Uloženo. Spotřeba VT '+f1(q.vt)+' kWh, NT '+f1(q.nt)+' kWh; náklady '+fmtMoney(cost)+'.'+(storageOk?'':' Pozor: prohlížeč nepovolil místní uložení.');status.className='status';advanceMeter();updateWorkflowCalc();try{scheduleSync()}catch(syncErr){say('syncStatus','Odečet je uložen v tomto zařízení; synchronizace se nezdařila: '+(syncErr.message||'chyba'),true)}}catch(err){status.textContent='Odečet se nepodařilo uložit: '+(err&&err.message?err.message:String(err));status.className='status bad'}}$('meterForm').addEventListener('submit',saveMeterReading);
+  function saveMeterReading(ev){if(ev){ev.preventDefault();ev.stopPropagation()}var status=$('meterStatus');try{var date=$('meterDate').value,svt=numVal('meterStartVT'),snt=numVal('meterStartNT'),vt=numVal('meterVT'),nt=numVal('meterNT'),pv=numVal('meterPriceVT'),pn=numVal('meterPriceNT'),rep=$('meterReplace').checked;var movedFrom=editingMeterDate&&editingMeterDate!==date?editingMeterDate:null;var allMeters=sortedByDate(meterReadings).filter(function(x){return !movedFrom||x.date!==movedFrom});if(movedFrom&&allMeters.some(function(x){return x.date===date})){status.textContent='Na zvolené datum už odečet elektroměru existuje. Nejprve uprav záznam, který má toto datum.';status.className='status bad';return}var prior=allMeters.filter(function(x){return x.date<date}).slice(-1)[0],next=allMeters.filter(function(x){return x.date>date}).slice(0,1)[0];if(movedFrom){var oldBeingMoved=meterReadings.find(function(x){return x.date===movedFrom&&!x._deleted});if(oldBeingMoved&&oldBeingMoved.replaced&&allMeters.some(function(x){return x.date>movedFrom})){status.textContent='Datum záznamu s výměnou elektroměru nelze změnit, protože na něj navazují další odečty.';status.className='status bad';return}}var nextVT=next?(next.replaced?next.oldVT:next.vt):null,nextNT=next?(next.replaced?next.oldNT:next.nt):null;if(!date||![svt,snt,vt,nt,pv,pn].every(function(n){return Number.isFinite(n)&&n>=0})||(!rep&&(vt<svt||nt<snt||(prior&&(Math.abs(svt-prior.vt)>1e-9||Math.abs(snt-prior.nt)>1e-9))))||(rep&&prior&&(Math.abs(svt-prior.vt)>1e-9||Math.abs(snt-prior.nt)>1e-9))||(next&&(vt>nextVT+1e-9||nt>nextNT+1e-9))){status.textContent='Zkontroluj počáteční a konečné stavy VT/NT a ceny. Počáteční stavy musí navazovat na předchozí odečet a konečné nesmí překročit pozdější odečet.';status.className='status bad';return}var rec={date:date,startVT:svt,startNT:snt,vt:vt,nt:nt,priceVT:pv,priceNT:pn,replaced:rep,updatedAt:Date.now()};if(rep){rec.oldVT=numVal('oldVT');rec.oldNT=numVal('oldNT');rec.newVT=numVal('newVT');rec.newNT=numVal('newNT');if(![rec.oldVT,rec.oldNT,rec.newVT,rec.newNT].every(function(n){return Number.isFinite(n)&&n>=0})||rec.oldVT<svt||rec.oldNT<snt||vt<rec.newVT||nt<rec.newNT||(prior&&(rec.oldVT<prior.vt-1e-9||rec.oldNT<prior.nt-1e-9))){status.textContent='Při výměně zkontroluj konečné stavy starého elektroměru, počáteční a aktuální stavy nového elektroměru i návaznost na předchozí odečet.';status.className='status bad';return}}var mm0=allMeters.filter(function(x){return x.date!==date&&!x.replaced}).map(function(x){var q=meterDelta(x);return q.vt+q.nt}).filter(function(t){return t>0}),mkey='m'+date+'|'+vt+'|'+nt;if(!rep&&mm0.length>=3&&window.__okKey!==mkey){var aM=mm0.reduce(function(a,t){return a+t},0)/mm0.length,iM=(vt-svt)+(nt-snt);if(iM>3*aM&&iM-aM>100){window.__okKey=mkey;status.textContent='Neobvyklá spotřeba '+f1(iM)+' kWh (běžně kolem '+f1(aM)+' kWh za měsíc) – zkontroluj překlep. Pokud je to správně, stiskni Uložit ještě jednou.';status.className='status bad';return}}window.__okKey=null;var stamp=Date.now(),oldYearBaseline=null,oldIndex=-1;if(movedFrom){oldIndex=meterReadings.findIndex(function(x){return x.date===movedFrom&&!x._deleted});if(oldIndex>=0){var oldRec=Object.assign({},meterReadings[oldIndex]),oldPrev=sortedByDate(meterReadings).filter(function(x){return x.date<movedFrom}).slice(-1)[0];if(!oldPrev)oldYearBaseline={startVT:oldRec.startVT,startNT:oldRec.startNT};meterReadings[oldIndex]={date:movedFrom,_deleted:true,updatedAt:stamp};}}rec.updatedAt=stamp;var same=meterReadings.findIndex(function(x){return x.date===date});if(same>=0)meterReadings[same]=rec;else meterReadings.push(rec);reconcileMeterStarts();if(oldYearBaseline&&movedFrom)reconcileMeterStarts(oldYearBaseline);editingMeterDate=null;store.set('fveMeterReadings',JSON.stringify(meterReadings));var active=meterReadings.find(function(x){return x.date===date&&!x._deleted}),q=meterDelta(active||rec),cost=Math.max(0,q.vt)*pv+Math.max(0,q.nt)*pn;/* Po uložení další záznam nezačínej v režimu výměny: zabrání to nechtěnému dvojímu započtení výměny v dalším měsíci. */$('meterReplace').checked=false;$('replaceFields').hidden=true;['meterStartVT','meterVT','meterStartNT','meterNT','oldVT','oldNT','newVT','newNT'].forEach(function(id){$(id).value=''});renderWorkflow();status.textContent='Uloženo. Spotřeba VT '+f1(q.vt)+' kWh, NT '+f1(q.nt)+' kWh; náklady '+fmtMoney(cost)+'.'+(storageOk?'':' Pozor: prohlížeč nepovolil místní uložení.');status.className='status';advanceMeter();updateWorkflowCalc();try{scheduleSync()}catch(syncErr){say('syncStatus','Odečet je uložen v tomto zařízení; synchronizace se nezdařila: '+(syncErr.message||'chyba'),true)}}catch(err){status.textContent='Odečet se nepodařilo uložit: '+(err&&err.message?err.message:String(err));status.className='status bad'}}$('meterForm').addEventListener('submit',saveMeterReading);
   // Include the new collections in the same Firebase user document and merge them by date.
   function mergeDated(local,remote){var map={};(local||[]).concat(remote||[]).forEach(function(x){if(!x||!x.date)return;var old=map[x.date],xt=+x.updatedAt||0,ot=old?(+old.updatedAt||0):-1;if(!old||xt>ot||(xt===ot&&x._deleted===true&&old._deleted!==true))map[x.date]=x});return Object.keys(map).sort().map(function(k){return map[k]})}
   var originalDoSync=doSync;
@@ -1562,7 +1586,88 @@ details[open] summary { margin-bottom: 10px; }
     st.textContent='Přepočteno '+n+' '+plural(n,'odečet','odečty','odečtů')+'.';st.className='status';
   });
 
-  function renderExtras(){renderAlerts();renderPayback();renderPriceHistory()}
+
+  /* ---------- status card, period, charts, exports, reminders ---------- */
+  function fmtD(ms){return new Date(ms).toLocaleDateString('cs-CZ',{day:'numeric',month:'numeric',year:'numeric'})}
+  function ago(dateStr){var days=Math.floor((Date.now()-new Date(dateStr+'T12:00:00').getTime())/86400000);return days<=0?'dnes':days===1?'včera':'před '+days+' '+plural(days,'dnem','dny','dny')}
+  function csD(x){var p=x.split('-');return Number(p[2])+'. '+Number(p[1])+'. '+p[0]}
+  function stRow(k,v,cls){return '<div class="st-row"><span>'+k+'</span><b class="'+(cls||'')+'">'+v+'</b></div>'}
+  function renderStatus(){
+    var w=sortedByDate(weeklyReadings).slice(-1)[0],m=sortedByDate(meterReadings).slice(-1)[0];
+    var sync=+store.get('fveLastSync')||0,bk=+store.get('fveLastBackup')||0,cloud=!!store.get('fveCloudUrl');
+    var h='';
+    h+=stRow('Synchronizace',sync?'ano, '+fmtD(sync):(cloud?'zapnutá, ještě neproběhla':'vypnutá'),sync?'st-ok':'st-warn');
+    h+=stRow('Poslední záloha',bk?fmtD(bk):'nikdy',bk&&Date.now()-bk<30*86400000?'st-ok':'st-warn');
+    if(w){var dw=Math.floor((Date.now()-new Date(w.date+'T12:00:00').getTime())/86400000);h+=stRow('Poslední týdenní odečet FVE',csD(w.date)+' ('+ago(w.date)+')',dw>9?'st-warn':'st-ok')}
+    else h+=stRow('Poslední týdenní odečet FVE','žádný','st-warn');
+    if(m){var dm=Math.floor((Date.now()-new Date(m.date+'T12:00:00').getTime())/86400000);h+=stRow('Poslední odečet elektroměru',csD(m.date)+' ('+ago(m.date)+')',dm>35?'st-warn':'st-ok')}
+    else h+=stRow('Poslední odečet elektroměru','žádný','st-warn');
+    if(w&&Math.floor((Date.now()-new Date(w.date+'T12:00:00').getTime())/86400000)>9)h+='<p class="hint st-warn">Týdenní odečet FVE už je pozdě – zadej aktuální stavy.</p>';
+    $('statusOut').innerHTML=h;
+  }
+  $('stBackup').addEventListener('click',function(){setNav('Backup');$('downloadJson').click()});
+  $('stEnter').addEventListener('click',function(){setNav('Enter')});
+  function renderPeriod(){
+    var per=store.get('fvePeriod')||'all';
+    Array.prototype.forEach.call(document.querySelectorAll('#periodSeg button'),function(b){b.setAttribute('aria-pressed',String(b.getAttribute('data-per')===per))});
+  }
+  $('periodSeg').addEventListener('click',function(ev){var b=ev.target.closest('button[data-per]');if(!b)return;store.set('fvePeriod',b.getAttribute('data-per'));renderPeriod();renderStats()});
+
+  var MLET=['L','Ú','B','D','K','Č','Č','S','Z','Ř','L','P'];
+  function barChart(groups,max,labels){
+    // groups: [[v1,v2,..] per month]; draws grouped (or stacked if stacked flag set on groups.stacked)
+    var W=360,H=170,pl=28,pb=18,pt=8,cw=(W-pl)/12,ch=H-pb-pt,svg='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Sloupcový graf po měsících">';
+    for(var t=0;t<=4;t++){var y=pt+ch-ch*t/4;svg+='<line x1="'+pl+'" x2="'+W+'" y1="'+y+'" y2="'+y+'" style="stroke:var(--line)" stroke-width="1"/><text x="'+(pl-4)+'" y="'+(y+3)+'" text-anchor="end">'+Math.round(max*t/4)+'</text>'}
+    for(var i=0;i<12;i++){
+      var g=groups[i]||[],x0=pl+i*cw+cw*.12,bw=cw*.76;
+      if(groups.stacked){var acc=0;g.forEach(function(v){if(!(v>0))return;var hh=ch*v/max;svg+='<rect x="'+x0+'" width="'+bw+'" y="'+(pt+ch-(acc+v)/max*ch)+'" height="'+hh+'" rx="1.5" style="fill:'+(g.indexOf(v)===0&&acc===0?'var(--sun)':'var(--grid)')+'"/>';acc+=v})}
+      else{var n=g.length,w2=bw/n;g.forEach(function(v,k){if(!(v>0))return;var hh=ch*v/max;svg+='<rect x="'+(x0+k*w2)+'" width="'+(w2-1)+'" y="'+(pt+ch-hh)+'" height="'+hh+'" rx="1.5" style="fill:'+(k===0?'var(--sun)':'var(--muted)')+';opacity:'+(k===0?1:.55)+'"/>'})}
+      svg+='<text x="'+(pl+i*cw+cw/2)+'" y="'+(H-5)+'" text-anchor="middle">'+MLET[i]+'</text>';
+    }
+    return '<div class="chart">'+svg+'</svg></div>';
+  }
+  function niceMax(v){if(!(v>0))return 10;var p=Math.pow(10,Math.floor(Math.log10(v))),f=v/p;return (f<=1?1:f<=2?2:f<=5?5:10)*p}
+  function renderCharts(){
+    var ys=allYears(),cur=ys.length?ys[ys.length-1]:new Date().getFullYear(),prev=cur-1,gs=[],mx=0;
+    for(var m=1;m<=12;m++){var a=monthFve(cur,m),b=monthFve(prev,m),va=a?a.e:0,vb=b?b.e:0;mx=Math.max(mx,va,vb);gs.push([va,vb])}
+    $('fveChartCur').textContent=String(cur);$('fveChartPrev').textContent=String(prev);
+    $('fveChart').innerHTML=mx>0?barChart(gs,niceMax(mx)):'<p class="hint">Graf se zobrazí po uložení prvních odečtů FVE.</p>';
+    var my=sortedByDate(meterReadings).map(function(r){return Number(r.date.slice(0,4))}),yr=my.length?my[my.length-1]:new Date().getFullYear(),g2=[],mx2=0;
+    for(var k=1;k<=12;k++){var vt=0,nt=0;sortedByDate(meterReadings).filter(function(r){return Number(r.date.slice(0,4))===yr&&Number(r.date.slice(5,7))===k}).forEach(function(r){var q=meterDelta(r);vt+=Math.max(0,q.vt);nt+=Math.max(0,q.nt)});g2.push([vt,nt]);mx2=Math.max(mx2,vt+nt)}
+    g2.stacked=true;
+    $('meterChartYear').textContent=String(yr);
+    $('meterChart').innerHTML=mx2>0?barChart(g2,niceMax(mx2)):'<p class="hint">Graf se zobrazí po uložení prvních odečtů elektroměru.</p>';
+    $('meterChartNote').textContent=mx2>0?'Spotřeba v kWh: VT dole, NT nahoře.':'';
+  }
+
+  $('exportMonthly').addEventListener('click',function(){
+    var ys=allYears();sortedByDate(meterReadings).forEach(function(r){var y=Number(r.date.slice(0,4));if(ys.indexOf(y)<0)ys.push(y)});ys.sort();
+    var rows=[['Rok','Měsíc','Výroba FVE (kWh)','Dokup ze sítě (kWh)','Spotřeba celkem (kWh)','Podíl FVE (%)','Úspora FVE (Kč)','Náklady dokup (Kč)','Elektroměr VT (kWh)','Elektroměr NT (kWh)','Náklady elektroměr (Kč)']],n=0;
+    function cell(x){return '"'+String(x==null?'':x).replace(/"/g,'""')+'"'}
+    function num(x){return x==null?'':String(Math.round(x*100)/100).replace('.',',')}
+    ys.forEach(function(y){for(var m=1;m<=12;m++){
+      var rec=V().filter(function(x){return x.year===y&&x.month===m})[0],f=null;
+      if(rec)f={e:rec.energy,g:rec.grid,s:rec.energy*rec.savedPrice,c:gridCost(rec)};else{var w=weeklyPeriodTotals(y,m);if(w.n)f={e:w.e,g:w.g,s:w.s,c:w.c}}
+      var vt=0,nt=0,mc=0,hm=false;sortedByDate(meterReadings).filter(function(r){return Number(r.date.slice(0,4))===y&&Number(r.date.slice(5,7))===m}).forEach(function(r){var q=meterDelta(r);hm=true;vt+=Math.max(0,q.vt);nt+=Math.max(0,q.nt);mc+=Math.max(0,q.vt)*r.priceVT+Math.max(0,q.nt)*r.priceNT});
+      if(!f&&!hm)continue;n++;
+      rows.push([y,m,f?num(f.e):'',f?num(f.g):'',f?num(f.e+f.g):'',f&&f.e+f.g>0?num(f.e/(f.e+f.g)*100):'',f?num(f.s):'',f?num(f.c):'',hm?num(vt):'',hm?num(nt):'',hm?num(mc):'']);
+    }});
+    if(!n){say('bStatus','Zatím není co exportovat.',true);return}
+    downloadFile('fve-po-mesicich-'+new Date().toISOString().slice(0,10)+'.csv','﻿'+rows.map(function(r){return r.map(cell).join(';')}).join('\r\n'),'text/csv;charset=utf-8');
+    say('bStatus','Export po měsících ('+n+' měsíců) je připravený. Otevři ho v Excelu.');
+  });
+
+  $('addReminder').addEventListener('click',function(){
+    function pad(x){return String(x).padStart(2,'0')}
+    var now=new Date(),sun=new Date(now.getFullYear(),now.getMonth(),now.getDate()+((7-now.getDay())%7||7),19,0,0);
+    var eom=new Date(now.getFullYear(),now.getMonth()+1,0,19,0,0);if(eom<=now)eom=new Date(now.getFullYear(),now.getMonth()+2,0,19,0,0);
+    function dt(x){return x.getFullYear()+pad(x.getMonth()+1)+pad(x.getDate())+'T'+pad(x.getHours())+'0000'}
+    function ev(uid,title,start,rule){return ['BEGIN:VEVENT','UID:'+uid+'@fve-sledovani','DTSTAMP:'+now.toISOString().replace(/[-:]/g,'').slice(0,15)+'Z','DTSTART:'+dt(start),'DURATION:PT15M','RRULE:'+rule,'SUMMARY:'+title,'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+title,'TRIGGER:PT0M','END:VALARM','END:VEVENT'].join('\r\n')}
+    var ics='BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//FVE sledovani//CS\r\n'+ev('tyden','Zadat týdenní odečet FVE',sun,'FREQ=WEEKLY;BYDAY=SU')+'\r\n'+ev('mesic','Zadat odečet elektroměru',eom,'FREQ=MONTHLY;BYMONTHDAY=-1')+'\r\nEND:VCALENDAR\r\n';
+    downloadFile('fve-pripominky.ics',ics,'text/calendar;charset=utf-8');
+    say('bStatus','Připomínky jsou ke stažení: každou neděli v 19:00 týdenní odečet FVE a poslední den v měsíci v 19:00 odečet elektroměru. Potvrď přidání do kalendáře.');
+  });
+  function renderExtras(){renderAlerts();renderPayback();renderPriceHistory();renderStatus();renderCharts();renderPeriod()}
   setNav(store.get('fveTab'));
 
   function overviewYears(records, dateField) {
@@ -1643,10 +1748,14 @@ details[open] summary { margin-bottom: 10px; }
         tokens.forEach(function(token){var normalized=token.replace(',','.');if(!seen[normalized]){seen[normalized]=true;list.push(normalized);}});
         list.sort(function(a,b){return b.replace(/\D/g,'').length-a.replace(/\D/g,'').length;});
         if(!list.length)throw new Error('Číslo se nepodařilo rozpoznat. Zkus oříznout fotku tak, aby byl vidět jen displej, a pořídit ostřejší snímek.');
-        candidates.innerHTML=list.map(function(v){return '<option value="'+v+'">'+v+'</option>';}).join('');
+        var priors=[numVal('meterStartVT'),numVal('meterStartNT')].filter(Number.isFinite);
+        function plaus(c){var n=Number(c);return priors.some(function(p){return n>=p&&n-p<=1500})}
+        var good=priors.length?list.filter(plaus):[];
+        if(priors.length)list=good.concat(list.filter(function(c){return !plaus(c)}));
+        candidates.innerHTML=list.map(function(v){return '<option value="'+v+'">'+v+(good.indexOf(v)>=0?' ✓ navazuje na předchozí stav':'')+'</option>';}).join('');
         candidatesWrap.hidden=list.length<2;
         value.value=list[0];
-        status.textContent='Návrh OCR: '+list[0]+' kWh. Před vložením porovnej hodnotu s displejem; OCR může zaměnit odečet za výrobní číslo.';
+        status.textContent=priors.length&&!good.length?'Žádné rozpoznané číslo nenavazuje na počáteční stav (VT '+priors[0]+'). Pravděpodobně to není odečet – zkus ostřejší fotku jen displeje, nebo zadej ručně.':'Návrh OCR: '+list[0]+' kWh'+(good.length?' (navazuje na předchozí stav)':'')+'. Před vložením porovnej hodnotu s displejem; OCR může zaměnit odečet za výrobní číslo.';
       }catch(e){status.textContent='OCR se nepodařilo: '+(e&&e.message?e.message:String(e));if(!rawText.textContent||rawText.textContent==='Rozpoznávání probíhá…')rawText.textContent='Bez výsledku.';}
     });
     candidates.addEventListener('change',function(){value.value=this.value;status.textContent='Vybrán kandidát '+this.value+'. Zkontroluj ho proti displeji před vložením.';});
