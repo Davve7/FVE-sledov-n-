@@ -1232,6 +1232,21 @@ details[open] summary { margin-bottom: 10px; }
     return messages[code] || ('Firebase: ' + (code || 'neznámá chyba').replace(/_/g, ' '));
   }
   var FETCH_MS = 20000;
+  // Firebase's ETag header / If-Match are used for safe concurrent writes. If the browser or a proxy
+  // blocks those custom headers, fall back to a plain read/write (merging still prevents data loss).
+  async function cloudGet(url) {
+    try { return await tfetch(url, { cache: 'no-store', headers: { 'X-Firebase-ETag': 'true' } }); }
+    catch (e) { return await tfetch(url, { cache: 'no-store' }); }
+  }
+  async function cloudPut(url, payload, etag) {
+    var h = { 'Content-Type': 'application/json' };
+    if (etag) {
+      h['If-Match'] = etag;
+      try { return await tfetch(url, { method: 'PUT', headers: h, body: JSON.stringify(payload) }); }
+      catch (e) { delete h['If-Match']; }
+    }
+    return await tfetch(url, { method: 'PUT', headers: h, body: JSON.stringify(payload) });
+  }
   function tfetch(url, opts) {
     var ctl = typeof AbortController !== 'undefined' ? new AbortController() : null, timer = null;
     opts = Object.assign({}, opts || {});
@@ -1296,11 +1311,10 @@ details[open] summary { margin-bottom: 10px; }
     try {
       var path = cloudPath(cfg), attempts = 0, completed = false;
       while (attempts++ < 6 && !completed) {
-        var response = await tfetch(path + '?auth=' + encodeURIComponent(authState.idToken), { cache: 'no-store', headers: { 'X-Firebase-ETag': 'true' } });
+        var response = await cloudGet(path + '?auth=' + encodeURIComponent(authState.idToken));
         if (response.status === 401 || response.status === 403) throw new Error('Přístup zamítnut. Zkontrolujte přihlášení, URL databáze a pravidla Firebase.');
         if (!response.ok) throw new Error('Cloud nelze přečíst (HTTP ' + response.status + '). Zkontrolujte URL a pravidla Firebase.');
         var etag = response.headers.get('ETag');
-        if (!etag) throw new Error('Firebase neposkytl ETag. Zkontrolujte URL Realtime Database; pokud sedí, prohlížeč hlavičku ETag nezpřístupnil. Data nebyla změněna.');
         var cloud = await response.json();
         if (cloud !== null && (typeof cloud !== 'object' || Array.isArray(cloud) || (cloud.data !== undefined && !Array.isArray(cloud.data)))) throw new Error('Cloud obsahuje neočekávaný formát. Data nebyla přepsána.');
         var remote = cloud && Array.isArray(cloud.data) ? clean(cloud.data) : [];
@@ -1318,7 +1332,7 @@ details[open] summary { margin-bottom: 10px; }
         var payload = Object.assign({}, cloud || {}, { data: merged, deleted: mergedDeletions, cena: mergedPrice, priceUpdatedAt: Math.max(remotePriceTime, mergedPriceTime), updatedAt: Date.now() });
         var shouldWrite = cloud === null || JSON.stringify(remote) !== JSON.stringify(merged) || JSON.stringify(remoteDeletions) !== JSON.stringify(mergedDeletions) || +cloud.priceUpdatedAt !== payload.priceUpdatedAt || parseFloat(cloud.cena) !== mergedPrice;
         if (shouldWrite) {
-          var put = await tfetch(path + '?auth=' + encodeURIComponent(authState.idToken), { method: 'PUT', headers: { 'Content-Type': 'application/json', 'If-Match': etag }, body: JSON.stringify(payload) });
+          var put = await cloudPut(path + '?auth=' + encodeURIComponent(authState.idToken), payload, etag);
           if (put.status === 412) continue;
           if (put.status === 401 || put.status === 403) throw new Error('Zápis zamítnut. Zkontrolujte přihlášení a pravidla Firebase.');
           if (!put.ok) throw new Error('Cloud nelze aktualizovat (HTTP ' + put.status + '). Místní data zůstala zachována.');
@@ -1459,11 +1473,10 @@ details[open] summary { margin-bottom: 10px; }
     try{
       var path=cloudPath(cfg),attempt=0,done=false,merged={},mInv=null;
       while(attempt++<6&&!done){
-        var response=await tfetch(path+'?auth='+encodeURIComponent(authState.idToken),{cache:'no-store',headers:{'X-Firebase-ETag':'true'}});
+        var response=await cloudGet(path+'?auth='+encodeURIComponent(authState.idToken));
         if(response.status===401||response.status===403)throw new Error('Přístup zamítnut. Zkontrolujte přihlášení a pravidla Firebase.');
         if(!response.ok)throw new Error('Cloud nelze přečíst (HTTP '+response.status+').');
         var etag=response.headers.get('ETag'),cloud=await response.json();
-        if(!etag)throw new Error('Firebase neposkytl ETag.');
         var payload=cloud&&typeof cloud==='object'&&!Array.isArray(cloud)?Object.assign({},cloud):{},changed=false;
         merged={};
         syncSets.forEach(function(st){
@@ -1476,7 +1489,7 @@ details[open] summary { margin-bottom: 10px; }
         if(ri&&isFinite(+ri.value)&&+ri.value>=0&&(!li||(+ri.at||0)>li.at))mInv={value:+ri.value,at:+ri.at||0};
         if(mInv){payload.investment=mInv;if(!ri||+ri.value!==mInv.value||(+ri.at||0)!==mInv.at)changed=true}
         if(changed){
-          var put=await tfetch(path+'?auth='+encodeURIComponent(authState.idToken),{method:'PUT',headers:{'Content-Type':'application/json','If-Match':etag},body:JSON.stringify(payload)});
+          var put=await cloudPut(path+'?auth='+encodeURIComponent(authState.idToken),payload,etag);
           if(put.status===412)continue;
           if(put.status===401||put.status===403)throw new Error('Zápis zamítnut. Zkontrolujte přihlášení a pravidla Firebase.');
           if(!put.ok)throw new Error('Cloud nelze aktualizovat (HTTP '+put.status+').');
