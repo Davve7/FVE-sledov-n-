@@ -11,7 +11,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}    .fve-price-field { margin: 10px 0 14px; }
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px)}    .fve-price-field { margin: 10px 0 14px; }
     .fve-price-field .price { display: block; max-width: 340px; font-size: 14px; }
     .fve-price-field .price input { display: block; width: 100%; margin-top: 6px; }
 
@@ -71,6 +71,7 @@ h1 .app-icon{width:1.15em;height:1.15em;flex:none;border-radius:.24em}
 .nav button svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .nav button[aria-selected="true"]{background:var(--sunk);color:var(--sun-ink)}
 body[data-tab="Home"] .note.bk{display:none}
+@media (forced-colors:active){.nav button[aria-selected="true"],.seg button[aria-pressed="true"]{outline:3px solid Highlight;outline-offset:-3px;forced-color-adjust:none;background:Highlight;color:HighlightText}.nav button[aria-selected="true"] svg{stroke:HighlightText}}
 body{padding-bottom:calc(90px + env(safe-area-inset-bottom)) !important}
 .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;background:var(--sunk);border:1px solid var(--line);border-radius:12px;padding:3px;margin:0 0 4px}
 .seg button{border:0;background:none;border-radius:9px;padding:9px 4px;font:inherit;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;min-height:40px}
@@ -81,7 +82,8 @@ body{padding-bottom:calc(90px + env(safe-area-inset-bottom)) !important}
 .chart svg{width:100%;height:auto;display:block}.chart text{fill:var(--muted);font-size:9px;font-family:inherit}
 .btnrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 
-@media(min-width:760px){.nav{max-width:520px;left:50%;right:auto;transform:translateX(-50%);border-radius:18px 18px 0 0;border:1px solid var(--line);border-bottom:0}}
+@media(max-width:820px){textarea{font-size:16px !important}}
+@media(min-width:760px){.nav button{font-size:13px;flex-direction:row;gap:8px;min-height:48px}.nav{max-width:680px;left:50%;right:auto;transform:translateX(-50%);border-radius:18px 18px 0 0;border:1px solid var(--line);border-bottom:0}}
 </style>
 <title>Sledování elektřiny</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -280,7 +282,7 @@ details[open] summary { margin-bottom: 10px; }
 .bk input[type="file"] { width: 100%; font-size: 14px; }
 
 @media (min-width: 700px) {
-  .stats { grid-template-columns: repeat(3, 1fr); }
+  .stats { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
   .vals { grid-template-columns: repeat(4, 1fr); }
 }
 @media (min-width: 900px) {
