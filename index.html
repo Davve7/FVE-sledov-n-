@@ -1227,21 +1227,33 @@ details[open] summary { margin-bottom: 10px; }
   }
   function cloudPath(cfg) { return cfg.url + '/users/' + encodeURIComponent(authState.localId) + '.json'; }
   function authError(code) {
-    var messages = { EMAIL_EXISTS:'Tento e-mail už má účet. Přihlaste se.', INVALID_EMAIL:'Zkontrolujte formát e-mailu.', WEAK_PASSWORD:'Heslo musí mít alespoň 6 znaků.', INVALID_LOGIN_CREDENTIALS:'E-mail nebo heslo není správné.', EMAIL_NOT_FOUND:'Účet s tímto e-mailem nebyl nalezen.', INVALID_PASSWORD:'E-mail nebo heslo není správné.', USER_DISABLED:'Tento účet je vypnutý.', TOO_MANY_ATTEMPTS_TRY_LATER:'Příliš mnoho pokusů. Zkuste to později.', OPERATION_NOT_ALLOWED:'Ve Firebase zapněte přihlášení e-mailem a heslem.', API_KEY_INVALID:'Zkontrolujte Firebase Web API klíč.' };
-    return messages[code] || ('Firebase: ' + String(code || 'neznámá chyba').replace(/_/g, ' '));
+    var messages = { EMAIL_EXISTS:'Tento e-mail už má účet. Přihlaste se.', INVALID_EMAIL:'Zkontrolujte formát e-mailu.', WEAK_PASSWORD:'Heslo musí mít alespoň 6 znaků.', INVALID_LOGIN_CREDENTIALS:'E-mail nebo heslo není správné.', EMAIL_NOT_FOUND:'Účet s tímto e-mailem nebyl nalezen.', INVALID_PASSWORD:'E-mail nebo heslo není správné.', USER_DISABLED:'Tento účet je vypnutý.', TOO_MANY_ATTEMPTS_TRY_LATER:'Příliš mnoho pokusů. Zkuste to později.', OPERATION_NOT_ALLOWED:'Ve Firebase zapněte přihlášení e-mailem a heslem.', API_KEY_INVALID:'Zkontrolujte Firebase Web API klíč.', API_KEY_HTTP_REFERRER_BLOCKED:'Klíč API má ve Firebase/Google Cloud omezení webů. Povolte adresu této stránky (např. vaše-jméno.github.io/*) nebo omezení zrušte.', CONFIGURATION_NOT_FOUND:'Ve Firebase není zapnuté Authentication. Otevřete Authentication → Začínáme a zapněte E-mail/heslo.', INVALID_API_KEY:'Zkontrolujte Firebase Web API klíč.', MISSING_PASSWORD:'Vyplňte heslo.' };
+    code = String(code || '').split(/[\s:]/)[0];
+    return messages[code] || ('Firebase: ' + (code || 'neznámá chyba').replace(/_/g, ' '));
+  }
+  var FETCH_MS = 20000;
+  function tfetch(url, opts) {
+    var ctl = typeof AbortController !== 'undefined' ? new AbortController() : null, timer = null;
+    opts = Object.assign({}, opts || {});
+    if (ctl) { opts.signal = ctl.signal; timer = setTimeout(function () { ctl.abort(); }, FETCH_MS); }
+    return fetch(url, opts).then(function (r) { if (timer) clearTimeout(timer); return r; }, function (e) {
+      if (timer) clearTimeout(timer);
+      throw new Error(e && e.name === 'AbortError' ? 'Firebase neodpovídá (časový limit 20 s). Zkontrolujte připojení a zkuste to znovu.' : 'Nelze se spojit s Firebase (' + ((e && e.message) || 'síť') + '). Zkontrolujte internet, VPN nebo firewall.');
+    });
   }
   async function authRequest(endpoint, body) {
     var cfg = syncConfig();
     if (!cfg) throw new Error('Nejdřív zadejte platnou Firebase URL a Web API klíč.');
-    var res = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:' + endpoint + '?key=' + encodeURIComponent(cfg.apiKey), { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
-    var json = await res.json();
-    if (!res.ok) throw new Error(authError(json && json.error && json.error.message));
+    var res = await tfetch('https://identitytoolkit.googleapis.com/v1/accounts:' + endpoint + '?key=' + encodeURIComponent(cfg.apiKey), { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    var json = null;
+    try { json = await res.json(); } catch (e) { json = null; }
+    if (!res.ok) throw new Error(authError(json && json.error && json.error.message) + (json && json.error && json.error.message ? '' : ' (HTTP ' + res.status + ')'));
     return json;
   }
   async function refreshAuth() {
     var token = store.get('fveRefreshToken'), cfg = syncConfig();
     if (!token || !cfg) return false;
-    var res = await fetch('https://securetoken.googleapis.com/v1/token?key=' + encodeURIComponent(cfg.apiKey), {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'grant_type=refresh_token&refresh_token=' + encodeURIComponent(token)});
+    var res = await tfetch('https://securetoken.googleapis.com/v1/token?key=' + encodeURIComponent(cfg.apiKey), {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'grant_type=refresh_token&refresh_token=' + encodeURIComponent(token)});
     var json = await res.json();
     if (!res.ok) { store.set('fveRefreshToken',''); authState = null; return false; }
     authState = { idToken:json.id_token, refreshToken:json.refresh_token, localId:json.user_id, expiresAt:Date.now() + (Number(json.expires_in) || 3600) * 1000 };
@@ -1284,7 +1296,7 @@ details[open] summary { margin-bottom: 10px; }
     try {
       var path = cloudPath(cfg), attempts = 0, completed = false;
       while (attempts++ < 6 && !completed) {
-        var response = await fetch(path + '?auth=' + encodeURIComponent(authState.idToken), { cache: 'no-store', headers: { 'X-Firebase-ETag': 'true' } });
+        var response = await tfetch(path + '?auth=' + encodeURIComponent(authState.idToken), { cache: 'no-store', headers: { 'X-Firebase-ETag': 'true' } });
         if (response.status === 401 || response.status === 403) throw new Error('Přístup zamítnut. Zkontrolujte přihlášení, URL databáze a pravidla Firebase.');
         if (!response.ok) throw new Error('Cloud nelze přečíst (HTTP ' + response.status + '). Zkontrolujte URL a pravidla Firebase.');
         var etag = response.headers.get('ETag');
@@ -1306,7 +1318,7 @@ details[open] summary { margin-bottom: 10px; }
         var payload = Object.assign({}, cloud || {}, { data: merged, deleted: mergedDeletions, cena: mergedPrice, priceUpdatedAt: Math.max(remotePriceTime, mergedPriceTime), updatedAt: Date.now() });
         var shouldWrite = cloud === null || JSON.stringify(remote) !== JSON.stringify(merged) || JSON.stringify(remoteDeletions) !== JSON.stringify(mergedDeletions) || +cloud.priceUpdatedAt !== payload.priceUpdatedAt || parseFloat(cloud.cena) !== mergedPrice;
         if (shouldWrite) {
-          var put = await fetch(path + '?auth=' + encodeURIComponent(authState.idToken), { method: 'PUT', headers: { 'Content-Type': 'application/json', 'If-Match': etag }, body: JSON.stringify(payload) });
+          var put = await tfetch(path + '?auth=' + encodeURIComponent(authState.idToken), { method: 'PUT', headers: { 'Content-Type': 'application/json', 'If-Match': etag }, body: JSON.stringify(payload) });
           if (put.status === 412) continue;
           if (put.status === 401 || put.status === 403) throw new Error('Zápis zamítnut. Zkontrolujte přihlášení a pravidla Firebase.');
           if (!put.ok) throw new Error('Cloud nelze aktualizovat (HTTP ' + put.status + '). Místní data zůstala zachována.');
@@ -1340,6 +1352,7 @@ details[open] summary { margin-bottom: 10px; }
     if (!cfg) { say('syncStatus','Zadejte a uložte platnou Firebase URL a Web API klíč.',true); return; }
     if (!email || !password) { say('syncStatus','Vyplňte e-mail a heslo.',true); return; }
     authBusy = true;
+    say('syncStatus', create ? 'Vytvářím účet…' : 'Přihlašuji…');
     try {
       var result = await authRequest(create ? 'signUp' : 'signInWithPassword', {email:email,password:password,returnSecureToken:true});
       authState = {idToken:result.idToken,refreshToken:result.refreshToken,localId:result.localId,email:result.email,expiresAt:Date.now() + (Number(result.expiresIn) || 3600) * 1000};
@@ -1446,7 +1459,7 @@ details[open] summary { margin-bottom: 10px; }
     try{
       var path=cloudPath(cfg),attempt=0,done=false,merged={},mInv=null;
       while(attempt++<6&&!done){
-        var response=await fetch(path+'?auth='+encodeURIComponent(authState.idToken),{cache:'no-store',headers:{'X-Firebase-ETag':'true'}});
+        var response=await tfetch(path+'?auth='+encodeURIComponent(authState.idToken),{cache:'no-store',headers:{'X-Firebase-ETag':'true'}});
         if(response.status===401||response.status===403)throw new Error('Přístup zamítnut. Zkontrolujte přihlášení a pravidla Firebase.');
         if(!response.ok)throw new Error('Cloud nelze přečíst (HTTP '+response.status+').');
         var etag=response.headers.get('ETag'),cloud=await response.json();
@@ -1463,7 +1476,7 @@ details[open] summary { margin-bottom: 10px; }
         if(ri&&isFinite(+ri.value)&&+ri.value>=0&&(!li||(+ri.at||0)>li.at))mInv={value:+ri.value,at:+ri.at||0};
         if(mInv){payload.investment=mInv;if(!ri||+ri.value!==mInv.value||(+ri.at||0)!==mInv.at)changed=true}
         if(changed){
-          var put=await fetch(path+'?auth='+encodeURIComponent(authState.idToken),{method:'PUT',headers:{'Content-Type':'application/json','If-Match':etag},body:JSON.stringify(payload)});
+          var put=await tfetch(path+'?auth='+encodeURIComponent(authState.idToken),{method:'PUT',headers:{'Content-Type':'application/json','If-Match':etag},body:JSON.stringify(payload)});
           if(put.status===412)continue;
           if(put.status===401||put.status===403)throw new Error('Zápis zamítnut. Zkontrolujte přihlášení a pravidla Firebase.');
           if(!put.ok)throw new Error('Cloud nelze aktualizovat (HTTP '+put.status+').');
