@@ -75,6 +75,13 @@ body[data-tab="Home"] .note.bk{display:none}
 .rep-sum{display:grid;grid-template-columns:1fr auto;gap:2px 12px;font-size:14px;margin:6px 0}.rep-sum span:nth-child(even){text-align:right;font-weight:700}
 .rep-scroll{overflow-x:auto}
 .print-only{display:none}
+.repview{position:fixed;top:0;right:0;bottom:0;left:0;z-index:80;background:var(--bg);color:var(--fg);display:flex;flex-direction:column;box-sizing:border-box;padding:max(10px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
+.repview-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:8px}
+.repview-bar h2{margin:0;font-size:18px}
+.repview-body{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
+.repview-actions{display:flex;flex-wrap:wrap;gap:8px;padding-top:10px}
+.repview-actions .btn{flex:1 1 140px}
+.repview .status{margin-top:8px}
 @media print{body>*:not(.print-only){display:none !important}.print-only{display:block !important;padding:0;color:#000;background:#fff;font-family:Arial,Helvetica,sans-serif}.print-only h1{font-size:20px;margin:0 0 4px}.print-only .rep-table th,.print-only .rep-table td{border-bottom:1px solid #bbb;color:#000}.print-only .rep-table th{color:#333}.print-only .rep-sum{font-size:13px}body{background:#fff !important;padding:0 !important}}
 @media (forced-colors:active){.nav button[aria-selected="true"],.seg button[aria-pressed="true"]{outline:3px solid Highlight;outline-offset:-3px;forced-color-adjust:none;background:Highlight;color:HighlightText}.nav button[aria-selected="true"] svg{stroke:HighlightText}}
 body{padding-bottom:calc(90px + env(safe-area-inset-bottom)) !important}
@@ -424,7 +431,7 @@ details[open] summary { margin-bottom: 10px; }
       <div id="paybackOut"></div>
     </section>
     <section class="card" id="reportCard" aria-labelledby="repTitle"><h2 id="repTitle">Roční shrnutí</h2>
-      <div class="row"><div class="field"><label for="repYear">Rok</label><select id="repYear"></select></div><div class="field"><label>&nbsp;</label><button type="button" class="btn ghost" id="repPrint">Vytisknout / uložit PDF</button></div></div>
+      <div class="row"><div class="field"><label for="repYear">Rok</label><select id="repYear"></select></div><div class="field"><label>&nbsp;</label><button type="button" class="btn ghost" id="repPrint">Otevřít report · PDF</button></div></div>
       <div id="repOut"></div>
     </section>
     <section class="card" id="alertsCard" aria-labelledby="alertsTitle">
@@ -580,6 +587,16 @@ details[open] summary { margin-bottom: 10px; }
   </div>
 </div>
 
+<div id="repView" class="repview" role="dialog" aria-modal="true" aria-labelledby="repViewTitle" hidden>
+  <div class="repview-bar"><h2 id="repViewTitle">Roční shrnutí</h2><button type="button" class="btn ghost" id="repClose">Zavřít</button></div>
+  <div class="repview-body" id="repViewBody" tabindex="0"></div>
+  <div class="repview-actions">
+    <button type="button" class="btn" id="repPdf">Uložit / sdílet PDF</button>
+    <button type="button" class="btn ghost" id="repText">Zkopírovat text</button>
+    <button type="button" class="btn ghost" id="repPrintNow">Tisk</button>
+  </div>
+  <p class="status" id="repStatus" role="status" aria-live="polite"></p>
+</div>
 <script>
 (function () {
   var MN = ['Leden','Únor','Březen','Duben','Květen','Červen','Červenec','Srpen','Září','Říjen','Listopad','Prosinec'];
@@ -1044,13 +1061,33 @@ details[open] summary { margin-bottom: 10px; }
   function resetImport() { pendImp = false; importBtn.textContent = 'Načíst data'; }
   ta.addEventListener('input', resetImport);
 
-  function downloadFile(filename, content, type) {
-    var blob = new Blob([content], { type: type });
+  function isIos() { var ua = navigator.userAgent || ''; return /iP(hone|ad|od)/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
+  function isStandalone() { try { return navigator.standalone === true || !!(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches); } catch (e) { return false; } }
+  function iosApp() { return isIos() && isStandalone(); }
+  function anchorDownload(filename, blob) {
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
     a.href = url; a.download = filename; a.style.display = 'none';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+  /* Sdílení souboru přes systémové menu (iPhone). Vrací 'shared' | 'cancelled' | 'unsupported' | 'failed'. */
+  function shareBlob(filename, blob, type, title) {
+    try {
+      if (!(navigator.share && navigator.canShare && typeof File === 'function')) return Promise.resolve('unsupported');
+      var f = new File([blob], filename, { type: String(type).split(';')[0] });
+      if (!navigator.canShare({ files: [f] })) return Promise.resolve('unsupported');
+      return navigator.share({ files: [f], title: title || filename }).then(function () { return 'shared'; }, function (e) { return e && e.name === 'AbortError' ? 'cancelled' : 'failed'; });
+    } catch (e) { return Promise.resolve('failed'); }
+  }
+  function downloadFile(filename, content, type) {
+    var blob = new Blob([content], { type: type });
+    /* V aplikaci z plochy iPhonu stahování přes odkaz nemusí fungovat – použije se sdílení (Uložit do Souborů). */
+    if (iosApp()) {
+      shareBlob(filename, blob, type, filename).then(function (r) { if (r === 'unsupported' || r === 'failed') anchorDownload(filename, blob); });
+      return;
+    }
+    anchorDownload(filename, blob);
   }
   $('downloadJson').addEventListener('click', function () {
     var weeks = typeof weeklyReadings !== 'undefined' ? weeklyReadings : [];
@@ -1875,28 +1912,184 @@ details[open] summary { margin-bottom: 10px; }
     sortedByDate(meterReadings).concat(carRows()).forEach(function(r){set[Number(r.date.slice(0,4))]=1});
     return Object.keys(set).map(Number).sort(function(a,b){return b-a});
   }
-  function reportHtml(y,forPrint){
-    var T={e:0,g:0,s:0,c:0,vt:0,nt:0,mc:0,ck:0,cc:0},rows='';
+  function reportData(y){
+    var T={e:0,g:0,s:0,c:0,vt:0,nt:0,mc:0,ck:0,cc:0},rows=[];
     for(var m=1;m<=12;m++){
       var f=monthFull(y,m),el=monthMeter(y,m),ca=monthCar(y,m);
       if(!f&&!el&&!ca)continue;
       if(f){T.e+=f.e;T.g+=f.g;T.s+=f.s;T.c+=f.c}
       if(el){T.vt+=el.vt;T.nt+=el.nt;T.mc+=el.c}
       if(ca){T.ck+=ca.k;T.cc+=ca.c}
-      rows+='<tr><td>'+MN_CS[m-1]+'</td><td>'+(f?f1(f.e):'–')+'</td><td>'+(f?f1(f.g):'–')+'</td><td>'+(f?kc(f.s):'–')+'</td><td>'+(el?f1(el.vt+el.nt):'–')+'</td><td>'+(ca?f1(ca.k):'–')+'</td></tr>';
+      rows.push([MN_CS[m-1],f?f1(f.e):'–',f?f1(f.g):'–',f?kc(f.s):'–',el?f1(el.vt+el.nt):'–',ca?f1(ca.k):'–']);
     }
-    if(!rows)return '<p class="hint">Za rok '+y+' zatím nejsou žádná data.</p>';
-    var con=T.e+T.g,sum='';
-    function line(k,v){sum+='<span>'+k+'</span><span>'+v+'</span>'}
+    if(!rows.length)return null;
+    var con=T.e+T.g,sum=[];
+    function line(k,v){sum.push([k,v])}
     line('Výroba FVE',f1(T.e)+' kWh');line('Dokup ze sítě (FVE odečty)',f1(T.g)+' kWh');
     if(con>0)line('Podíl FVE na spotřebě',Math.round(T.e/con*100)+' %');
     line('Úspora díky FVE',kc(T.s));line('Náklady na dokup',kc(T.c));
     if(T.vt+T.nt>0){line('Elektroměr VT / NT',f1(T.vt)+' / '+f1(T.nt)+' kWh');line('Náklady podle elektroměru',kc(T.mc))}
     if(T.ck>0){line('Nabíjení auta',f1(T.ck)+' kWh · '+kc(T.cc));var fr=fuelCalc(T.ck,T.cc);if(fr)line('Úspora oproti palivu (odhad)',kc(fr.save)+' (cca '+Math.round(fr.km).toLocaleString('cs-CZ')+' km)')}
     var inv=readInvestment();if(inv&&inv.value>0){var S=0;allYears().forEach(function(yy){S+=combinedYearTotals(yy).s});line('Návratnost FVE (celkem)',kc(S)+' z '+kc(inv.value)+' ('+f1(S/inv.value*100)+' %)')}
-    var tbl='<div class="rep-scroll"><table class="rep-table"><thead><tr><th>Měsíc</th><th>Výroba kWh</th><th>Dokup kWh</th><th>Úspora</th><th>Elektroměr kWh</th><th>Auto kWh</th></tr></thead><tbody>'+rows+'</tbody><tfoot><tr><td>Celkem</td><td>'+f1(T.e)+'</td><td>'+f1(T.g)+'</td><td>'+kc(T.s)+'</td><td>'+f1(T.vt+T.nt)+'</td><td>'+f1(T.ck)+'</td></tr></tfoot></table></div>';
+    return {year:y,sum:sum,head:['Měsíc','Výroba kWh','Dokup kWh','Úspora','Elektroměr kWh','Auto kWh'],rows:rows,foot:['Celkem',f1(T.e),f1(T.g),kc(T.s),f1(T.vt+T.nt),f1(T.ck)]};
+  }
+  function reportHtml(y,forPrint){
+    var R=reportData(y);
+    if(!R)return '<p class="hint">Za rok '+y+' zatím nejsou žádná data.</p>';
+    function tr(a,tag){return '<tr>'+a.map(function(c){return '<'+tag+'>'+c+'</'+tag+'>'}).join('')+'</tr>'}
+    var sum=R.sum.map(function(p){return '<span>'+p[0]+'</span><span>'+p[1]+'</span>'}).join('');
+    var tbl='<div class="rep-scroll"><table class="rep-table"><thead>'+tr(R.head,'th')+'</thead><tbody>'+R.rows.map(function(r){return tr(r,'td')}).join('')+'</tbody><tfoot>'+tr(R.foot,'td')+'</tfoot></table></div>';
     return (forPrint?'<h1>Sledování elektřiny – rok '+y+'</h1><p>Vytvořeno '+new Date().toLocaleDateString('cs-CZ')+'</p>':'')+'<div class="rep-sum">'+sum+'</div>'+tbl;
   }
+  function reportText(y){
+    var R=reportData(y);
+    if(!R)return 'Sledování elektřiny – rok '+y+'\nZa tento rok zatím nejsou žádná data.';
+    var t='Sledování elektřiny – rok '+y+'\nVytvořeno '+new Date().toLocaleDateString('cs-CZ')+'\n\n';
+    R.sum.forEach(function(p){t+=p[0]+': '+p[1]+'\n'});
+    t+='\n'+R.head.join(' | ')+'\n';
+    R.rows.forEach(function(r){t+=r.join(' | ')+'\n'});
+    return t+R.foot.join(' | ')+'\n';
+  }
+
+  /* ---- PDF bez knihoven: report se vykreslí do canvasu a vloží do jednoduchého PDF ---- */
+  function reportPaint(ctx,R,W,M,draw){
+    var FONT='Arial, Helvetica, sans-serif',y=M+36;
+    function fit(txt,maxW,px,bold){var sz=px;ctx.font=(bold?'bold ':'')+sz+'px '+FONT;while(sz>14&&ctx.measureText(txt).width>maxW){sz-=1;ctx.font=(bold?'bold ':'')+sz+'px '+FONT}return sz}
+    ctx.textBaseline='alphabetic';
+    if(draw){ctx.fillStyle='#000';ctx.textAlign='left'}
+    ctx.font='bold 46px '+FONT;if(draw)ctx.fillText('Sledování elektřiny – rok '+R.year,M,y);
+    y+=46;ctx.font='26px '+FONT;if(draw){ctx.fillStyle='#444';ctx.fillText('Vytvořeno '+new Date().toLocaleDateString('cs-CZ'),M,y);ctx.fillStyle='#000'}
+    y+=50;
+    R.sum.forEach(function(p){
+      ctx.font='28px '+FONT;var lw=ctx.measureText(p[0]).width;
+      ctx.font='bold 28px '+FONT;var vw=ctx.measureText(p[1]).width;
+      var wrap=lw+vw+30>W-2*M;
+      if(draw){ctx.font='28px '+FONT;ctx.textAlign='left';ctx.fillText(p[0],M,y)}
+      if(wrap)y+=38;
+      if(draw){fit(p[1],W-2*M,28,true);ctx.textAlign='right';ctx.fillText(p[1],W-M,y);ctx.textAlign='left'}
+      y+=14;if(draw){ctx.fillStyle='#ccc';ctx.fillRect(M,y,W-2*M,2);ctx.fillStyle='#000'}
+      y+=34;
+    });
+    y+=16;
+    var first=200,other=(W-2*M-first)/5,xs=[M],k;
+    for(k=0;k<6;k++)xs.push(xs[k]+(k===0?first:other));
+    function rowOut(cells,px,bold,color,rule){
+      var i,w;
+      if(draw){
+        for(i=0;i<6;i++){
+          w=(i===0?first:other)-12;fit(cells[i],w,px,bold);ctx.fillStyle=color;
+          if(i===0){ctx.textAlign='left';ctx.fillText(cells[i],xs[0],y)}else{ctx.textAlign='right';ctx.fillText(cells[i],xs[i+1]-6,y)}
+        }
+        ctx.textAlign='left';ctx.fillStyle=rule[0];ctx.fillRect(M,y+14,W-2*M,rule[1]);ctx.fillStyle='#000';
+      }
+      y+=50;
+    }
+    rowOut(R.head,20,true,'#333',['#000',3]);
+    R.rows.forEach(function(r){rowOut(r,26,false,'#000',['#bbb',2])});
+    rowOut(R.foot,26,true,'#000',['#000',3]);
+    return y;
+  }
+  function buildPdf(dataUrl,w,h){
+    var bin=atob(dataUrl.split(',')[1]),img=new Uint8Array(bin.length),i;
+    for(i=0;i<bin.length;i++)img[i]=bin.charCodeAt(i);
+    var pw=595.28,ph=pw*h/w,parts=[],len=0,offs=[];
+    function put(x){var u=x;if(typeof x==='string'){u=new Uint8Array(x.length);for(var q=0;q<x.length;q++)u[q]=x.charCodeAt(q)&255}parts.push(u);len+=u.length}
+    function obj(n,body){offs[n]=len;put(n+' 0 obj\n'+body+'\nendobj\n')}
+    function pad10(n){var t=String(n);while(t.length<10)t='0'+t;return t}
+    put('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
+    obj(1,'<< /Type /Catalog /Pages 2 0 R >>');
+    obj(2,'<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+    obj(3,'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+pw.toFixed(2)+' '+ph.toFixed(2)+'] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>');
+    offs[4]=len;put('4 0 obj\n<< /Type /XObject /Subtype /Image /Width '+w+' /Height '+h+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+img.length+' >>\nstream\n');put(img);put('\nendstream\nendobj\n');
+    var c='q '+pw.toFixed(2)+' 0 0 '+ph.toFixed(2)+' 0 0 cm /Im0 Do Q';
+    obj(5,'<< /Length '+c.length+' >>\nstream\n'+c+'\nendstream');
+    var xr=len,x='xref\n0 6\n0000000000 65535 f \n';
+    for(i=1;i<=5;i++)x+=pad10(offs[i])+' 00000 n \n';
+    put(x+'trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n'+xr+'\n%%EOF\n');
+    return new Blob(parts,{type:'application/pdf'});
+  }
+  function reportPdfBlob(R){
+    var W=1240,M=90,cv=document.createElement('canvas'),ctx=cv.getContext&&cv.getContext('2d');
+    if(!ctx)return null;
+    var need=reportPaint(ctx,R,W,M,false)+M,H=Math.max(1754,Math.ceil(need));
+    cv.width=W;cv.height=H;ctx=cv.getContext('2d');
+    ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
+    reportPaint(ctx,R,W,M,true);
+    var url=cv.toDataURL('image/jpeg',0.92);
+    if(url.indexOf('data:image/jpeg')!==0)return null;
+    return buildPdf(url,W,H);
+  }
+
+  /* ---- náhled reportu v celé obrazovce + uložení / sdílení ---- */
+  var repCur=0,repOpener=null;
+  function openReport(){
+    var y=Number($('repYear').value)||new Date().getFullYear(),has=!!reportData(y);
+    repCur=y;repOpener=document.activeElement;
+    $('repViewTitle').textContent='Roční shrnutí '+y;
+    $('repViewBody').innerHTML=reportHtml(y,false);
+    ['repPdf','repText','repPrintNow'].forEach(function(id){$(id).disabled=!has});
+    $('repText').textContent=(isIos()&&navigator.share)?'Sdílet text':'Zkopírovat text';
+    $('repPrintNow').hidden=iosApp();
+    say('repStatus',has?'':'Za tento rok zatím nejsou žádná data.',!has);
+    $('repView').hidden=false;$('repViewBody').scrollTop=0;
+    try{$('repClose').focus()}catch(e){}
+  }
+  function closeReport(){
+    $('repView').hidden=true;
+    if(repOpener&&repOpener.focus){try{repOpener.focus()}catch(e){}}
+    repOpener=null;
+  }
+  function copyText(txt){
+    function legacy(){
+      var t=document.createElement('textarea');t.value=txt;t.setAttribute('readonly','');t.style.cssText='position:fixed;top:0;left:0;opacity:0;font-size:16px';
+      $('repView').appendChild(t);t.focus();t.select();try{t.setSelectionRange(0,t.value.length)}catch(e){}
+      var ok=false;try{ok=document.execCommand('copy')}catch(e){}
+      t.remove();
+      say('repStatus',ok?'Text zkopírován do schránky.':'Kopírování není dostupné. Označte text v náhledu a zkopírujte ho ručně.',!ok);
+    }
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(function(){say('repStatus','Text zkopírován do schránky.')},legacy);
+    }else legacy();
+  }
+  $('repPrint').addEventListener('click',openReport);
+  $('repClose').addEventListener('click',closeReport);
+  $('repPdf').addEventListener('click',function(){
+    var y=repCur,R=reportData(y);
+    if(!R){say('repStatus','Za tento rok zatím nejsou žádná data.',true);return}
+    var blob=null;try{blob=reportPdfBlob(R)}catch(e){blob=null}
+    if(!blob){say('repStatus','PDF se v tomto prohlížeči nepodařilo vytvořit. Použijte „'+$('repText').textContent+'“.',true);return}
+    var name='sledovani-elektriny-'+y+'.pdf';
+    if(isIos()&&navigator.share){
+      say('repStatus','Otevírám sdílení…');
+      shareBlob(name,blob,'application/pdf','Sledování elektřiny '+y).then(function(r){
+        if(r==='shared')say('repStatus','PDF je odesláno / uloženo.');
+        else if(r==='cancelled')say('repStatus','Sdílení zrušeno.');
+        else{anchorDownload(name,blob);say('repStatus','Sdílení PDF není dostupné, zkouším stáhnout soubor. Když se nic nestane, použijte „'+$('repText').textContent+'“.',true)}
+      });
+    }else{anchorDownload(name,blob);say('repStatus','PDF '+name+' je připraveno ke stažení.')}
+  });
+  $('repText').addEventListener('click',function(){
+    var y=repCur,txt=reportText(y);
+    if(isIos()&&navigator.share){
+      navigator.share({title:'Sledování elektřiny '+y,text:txt}).then(function(){say('repStatus','Text je odeslán.')},function(e){
+        if(e&&e.name==='AbortError')say('repStatus','Sdílení zrušeno.');else copyText(txt);
+      });
+    }else copyText(txt);
+  });
+  $('repPrintNow').addEventListener('click',function(){
+    $('printReport').innerHTML=reportHtml(repCur,true);
+    setTimeout(function(){try{window.print()}catch(e){say('repStatus','Tisk není v tomto prohlížeči dostupný. Použijte „Uložit / sdílet PDF“.',true)}},50);
+  });
+  document.addEventListener('keydown',function(ev){
+    if($('repView').hidden)return;
+    if(ev.key==='Escape'){ev.preventDefault();closeReport();return}
+    if(ev.key!=='Tab')return;
+    var f=Array.prototype.filter.call($('repView').querySelectorAll('button,[tabindex="0"]'),function(el){return !el.disabled&&!el.hidden&&el.offsetParent!==null});
+    if(!f.length)return;
+    var a=f[0],z=f[f.length-1];
+    if(ev.shiftKey&&document.activeElement===a){ev.preventDefault();z.focus()}
+    else if(!ev.shiftKey&&document.activeElement===z){ev.preventDefault();a.focus()}
+  });
   function renderReport(){
     var sel=$('repYear'),ys=reportYears(),cur=sel.value;
     var opts=ys.length?ys:[new Date().getFullYear()];
@@ -1907,10 +2100,6 @@ details[open] summary { margin-bottom: 10px; }
     $('repOut').innerHTML=reportHtml(Number(sel.value),false);
   }
   $('repYear').addEventListener('change',renderReport);
-  $('repPrint').addEventListener('click',function(){
-    $('printReport').innerHTML=reportHtml(Number($('repYear').value),true);
-    setTimeout(function(){try{window.print()}catch(e){say('bStatus','Tisk není v tomto prohlížeči dostupný.',true)}},50);
-  });
   function renderExtras(){renderAlerts();renderPayback();renderPriceHistory();renderStatus();renderCharts();renderPeriod();renderCar();renderFuel();renderReport()}
   resetCarForm();
   setNav(store.get('fveTab'));
