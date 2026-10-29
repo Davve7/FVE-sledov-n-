@@ -75,6 +75,14 @@ body[data-tab="Home"] .note.bk{display:none}
 .rep-sum{display:grid;grid-template-columns:1fr auto;gap:2px 12px;font-size:14px;margin:6px 0}.rep-sum span:nth-child(even){text-align:right;font-weight:700}
 .rep-scroll{overflow-x:auto}
 .print-only{display:none}
+.sh-table th,.sh-table td{padding:6px 4px}
+.sh-days{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px}
+.sh-days li{display:grid;grid-template-columns:74px 1fr auto;align-items:center;gap:8px;font-size:13px}
+.sh-days .bar{height:10px;background:var(--sunk);border-radius:5px;overflow:hidden}
+.sh-days .bar i{display:block;height:100%;background:var(--grid);border-radius:5px}
+.sh-days b{text-align:right;white-space:nowrap}.sh-days small{color:var(--muted);font-weight:400}
+#shellyScriptText{min-height:150px;font-size:13px;margin-top:8px}
+@media (forced-colors:active){.sh-days .bar i{forced-color-adjust:none;background:Highlight}.sh-days .bar{border:1px solid CanvasText}}
 .repview{position:fixed;top:0;right:0;bottom:0;left:0;z-index:80;background:var(--bg);color:var(--fg);display:flex;flex-direction:column;box-sizing:border-box;padding:max(10px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
 .repview-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:8px}
 .repview-bar h2{margin:0;font-size:18px}
@@ -442,6 +450,13 @@ details[open] summary { margin-bottom: 10px; }
   </div>
 
   <div id="viewMeter" class="pane" role="tabpanel" hidden>
+    <section class="card" id="shellyCard" aria-labelledby="shellyTitle" hidden>
+      <div class="chead"><h2 id="shellyTitle">Odběr ze sítě (Shelly Pro 3EM)</h2></div>
+      <p class="hint" id="shellyFresh"></p>
+      <div id="shellySum"></div>
+      <ul class="sh-days" id="shellyDays" aria-label="Odběr po dnech"></ul>
+      <p class="hint" id="shellyNote"></p>
+    </section>
     <section class="card" aria-labelledby="meterChartTitle"><div class="chead"><h2 id="meterChartTitle">Spotřeba elektroměru</h2><span id="meterChartYear" class="hint"></span></div>
       <div class="legend"><span><i style="background:var(--sun)"></i>VT</span><span><i style="background:var(--grid)"></i>NT</span></div><div id="meterChart"></div><p class="hint" id="meterChartNote"></p></section>
     <section class="monthly-overviews" aria-label="Elektroměr">
@@ -552,17 +567,43 @@ details[open] summary { margin-bottom: 10px; }
           <p class="status" id="syncStatus" role="status" aria-live="polite"></p>
           <details><summary style="font-size:14px">Bezpečná pravidla Firebase Realtime Database</summary>
             <p>V Authentication zapněte poskytovatele E‑mail/heslo. V Realtime Database → Pravidla nahraďte pravidla následujícím JSONem. Každý účet pak může číst a měnit jen vlastní záznamy podle jedinečného Firebase UID:</p>
-            <pre style="white-space:pre-wrap;overflow-wrap:anywhere;background:var(--sunk);padding:10px;border-radius:8px;font-size:12px">{
+            <pre id="rulesText" style="white-space:pre-wrap;overflow-wrap:anywhere;background:var(--sunk);padding:10px;border-radius:8px;font-size:12px">{
   "rules": {
     "users": {
       "$uid": {
         ".read": "auth != null &amp;&amp; auth.uid === $uid",
         ".write": "auth != null &amp;&amp; auth.uid === $uid"
       }
+    },
+    "shelly": {
+      "$uid": {
+        ".read": "auth != null &amp;&amp; auth.uid === $uid",
+        ".write": "auth != null &amp;&amp; auth.uid === $uid",
+        "$ts": {
+          ".write": "!data.exists()",
+          ".validate": "$ts.matches(/^[0-9]{10}$/) &amp;&amp; newData.hasChildren(['imp','exp'])",
+          "imp": { ".validate": "newData.isNumber() &amp;&amp; newData.val() &gt;= 0 &amp;&amp; newData.val() &lt; 1000000000000" },
+          "exp": { ".validate": "newData.isNumber() &amp;&amp; newData.val() &gt;= 0 &amp;&amp; newData.val() &lt; 1000000000000" },
+          "$other": { ".validate": false }
+        }
+      }
     }
   }
 }</pre>
+            <p class="hint">Část „shelly“ je potřeba jen pro automatický odečet z Shelly Pro 3EM (viz níže). Dovoluje bez přihlášení jen přidat nový odečet na cestu s vaším UID; číst, měnit nebo mazat může jen přihlášený vlastník.</p>
             <p>Účty vytvořené přes tlačítko výše jsou samostatné; na všech svých zařízeních použijte stejný e‑mail a heslo.</p>
+          </details>
+          <details id="shellySetup"><summary style="font-size:14px">Automatický odečet ze Shelly Pro 3EM</summary>
+            <p>Shelly Pro 3EM každý den v 0:00 pošle stav čítačů (odebraná a dodaná energie) do vašeho Firebase. Aplikace si je načte sama a spočítá denní odběr a přetok.</p>
+            <ol class="hint">
+              <li>V pravidlech Firebase (výše) mějte i část „shelly“.</li>
+              <li>Přihlaste se tlačítkem „Přihlásit“. Do skriptu se tím doplní adresa databáze a vaše UID.</li>
+              <li>Ve webovém rozhraní Shelly otevřete Scripts → Add script, vložte skript níže, uložte ho, zapněte „Run on startup“ a spusťte ho.</li>
+              <li>Hned po spuštění pošle jeden zkušební odečet. Zobrazí se po stisknutí „Načíst odečty ze Shelly“. Dál se odečet posílá každý den v 0:00 místního času zařízení (zkontrolujte časové pásmo v nastavení Shelly: Europe/Prague).</li>
+            </ol>
+            <textarea id="shellyScriptText" readonly spellcheck="false" aria-label="Skript pro Shelly"></textarea>
+            <div class="acts"><button type="button" class="btn" id="shellyCopy">Zkopírovat skript</button><button type="button" class="btn ghost" id="shellyPull">Načíst odečty ze Shelly</button></div>
+            <p class="status" id="shellyStatus" role="status" aria-live="polite"></p>
           </details>
         </fieldset>
         <div class="field">
@@ -1452,6 +1493,7 @@ details[open] summary { margin-bottom: 10px; }
   // New weekly FVE readings and monthly utility-meter readings. Stored separately to preserve legacy records.
   function readArray(key){try{var a=JSON.parse(store.get(key)||'[]');return Array.isArray(a)?a:[]}catch(e){return []}}
   var weeklyReadings=readArray('fveWeeklyReadings'), meterReadings=readArray('fveMeterReadings'), priceHistory=readArray('fvePriceHistory'), chargeReadings=readArray('fveChargeReadings');
+  var shellyData=loadShelly(),shellyPulling=false,shellyLastPull=0,shellyDeniedAt=0;
   var editingWeeklyDate=null, editingMeterDate=null;
   function dateText(v){return v?new Date(v+'T12:00:00').toLocaleDateString('cs-CZ'):'—'}
   function numVal(id){return parseFloat($(id).value)}
@@ -1727,6 +1769,7 @@ details[open] summary { margin-bottom: 10px; }
     else h+=stRow('Poslední týdenní odečet FVE','žádný','st-warn');
     if(m){var dm=Math.floor((Date.now()-new Date(m.date+'T12:00:00').getTime())/86400000);h+=stRow('Poslední odečet elektroměru',csD(m.date)+' ('+ago(m.date)+')',dm>35?'st-warn':'st-ok')}
     else h+=stRow('Poslední odečet elektroměru','žádný','st-warn');
+    if(shellyData.length){var sl=shellyData[shellyData.length-1],sh=(Date.now()-sl.ts*1000)/3600000;h+=stRow('Shelly – poslední odečet',fmtDT(sl.ts*1000)+' ('+ageH(sh)+')',sh>36?'st-warn':'st-ok')}
     if(w&&Math.floor((Date.now()-new Date(w.date+'T12:00:00').getTime())/86400000)>9)h+='<p class="hint st-warn">Týdenní odečet FVE už je pozdě – zadej aktuální stavy.</p>';
     $('statusOut').innerHTML=h;
   }
@@ -2100,7 +2143,133 @@ details[open] summary { margin-bottom: 10px; }
     $('repOut').innerHTML=reportHtml(Number(sel.value),false);
   }
   $('repYear').addEventListener('change',renderReport);
-  function renderExtras(){renderAlerts();renderPayback();renderPriceHistory();renderStatus();renderCharts();renderPeriod();renderCar();renderFuel();renderReport()}
+  /* ---------- Shelly Pro 3EM: denní odečty z Firebase ---------- */
+  var SHELLY_TPL="// Sledovani elektriny - denni odecet ze Shelly Pro 3EM do Firebase\n// Kazdy den v 0:00 (mistni cas zarizeni) precte citace odebrane a dodane energie\n// a zapise je do Firebase Realtime Database. Po spusteni skriptu posle jeden\n// zkusebni odecet hned (poznate tak, ze vse funguje).\n//\n// Napsano jen v jednoduche podmnozine JavaScriptu (pouze var, klasicke funkce,\n// bez novejsich konstrukci), aby bezelo v Shelly skriptech. Vypisy najdete v konzoli skriptu.\n\nvar DB_URL = \"DOPLNIT_URL\";   // adresa Realtime Database bez lomitka na konci\nvar UID = \"DOPLNIT_UID\";      // vase Firebase UID (aplikace ho doplni sama)\nvar VALIDATE_TLS = true;      // kdyz konzole hlasi chybu certifikatu, zkuste false\nvar EM_ID = 0;                // cislo komponenty EM (u Pro 3EM 0)\n\nvar CHECK_MS = 30000;         // jak casto se kontroluje, zda je 0:00\nvar RETRY_MS = 300000;        // opakovani po chybe: 5 minut\nvar MAX_TRIES = 36;           // ... nejvyse 36x (3 hodiny)\n\nvar busy = false;\nvar tries = 0;\nvar lastTrig = 0;\n\nfunction fail(why) {\n  print(\"Odecet: chyba \" + tries + \"/\" + MAX_TRIES + \": \" + why);\n  if (tries >= MAX_TRIES) {\n    print(\"Odecet: vzdavam to, dalsi pokus bude pri pristim odectu.\");\n    busy = false;\n    return;\n  }\n  Timer.set(RETRY_MS, false, attempt);\n}\n\nfunction attempt() {\n  tries = tries + 1;\n  Shelly.call(\"EMData.GetStatus\", { id: EM_ID }, function (r, e, m) {\n    var s = Shelly.getComponentStatus(\"sys\");\n    if (!r || typeof r.total_act !== \"number\" || typeof r.total_act_ret !== \"number\") {\n      fail(\"nelze precist citace EMData (\" + e + \" \" + m + \"). Zkontrolujte, ze je v Pro 3EM nastaven typ klesti.\");\n      return;\n    }\n    if (!s || !s.unixtime) {\n      fail(\"cas zarizeni neni synchronizovany\");\n      return;\n    }\n    var ts = s.unixtime;\n    var imp = Math.round(r.total_act * 10) / 10;\n    var exp = Math.round(r.total_act_ret * 10) / 10;\n    var req = {\n      method: \"PUT\",\n      url: DB_URL + \"/shelly/\" + UID + \"/\" + ts + \".json\",\n      body: JSON.stringify({ imp: imp, exp: exp }),\n      headers: { \"Content-Type\": \"application/json\" },\n      timeout: 20\n    };\n    if (!VALIDATE_TLS) {\n      req.ssl_ca = \"*\";\n    }\n    Shelly.call(\"HTTP.Request\", req, function (res, err, msg) {\n      if (res && res.code >= 200 && res.code \u003c 300) {\n        print(\"Odecet: odeslano \" + ts + \" odebrano \" + imp + \" Wh, dodano \" + exp + \" Wh\");\n        busy = false;\n        return;\n      }\n      if (res && res.code === 401) {\n        fail(\"Firebase odmitl zapis (HTTP 401) - zkontrolujte pravidla databaze a UID\");\n        return;\n      }\n      if (res) {\n        fail(\"HTTP \" + res.code);\n        return;\n      }\n      fail(\"pozadavek se nezdaril (\" + err + \" \" + msg + \")\");\n    });\n  });\n}\n\nfunction tick() {\n  if (busy) {\n    return;\n  }\n  var s = Shelly.getComponentStatus(\"sys\");\n  if (!s || !s.unixtime || !s.time) {\n    return;\n  }\n  var now = s.unixtime;\n  if (lastTrig === 0 || (s.time === \"00:00\" && now - lastTrig >= 3600)) {\n    lastTrig = now;\n    busy = true;\n    tries = 0;\n    attempt();\n  }\n}\n\nif (DB_URL.indexOf(\"https://\") !== 0 || UID.length \u003c 10) {\n  print(\"Odecet: doplnte DB_URL a UID na zacatku skriptu.\");\n} else {\n  Timer.set(CHECK_MS, true, tick);\n  tick();\n  print(\"Odecet: skript bezi, odecet se posila kazdy den v 0:00.\");\n}\n";
+  function okShellyNum(v){return typeof v==='number'&&isFinite(v)&&v>=0&&v<1e12}
+  function cleanShellyArr(arr){
+    var out=[],seen={};
+    (Array.isArray(arr)?arr:[]).forEach(function(r){
+      if(!r||typeof r.ts!=='number'||Math.floor(r.ts)!==r.ts||r.ts<1e9||r.ts>4e9||!okShellyNum(r.imp)||!okShellyNum(r.exp)||seen[r.ts])return;
+      seen[r.ts]=1;out.push({ts:r.ts,imp:r.imp,exp:r.exp});
+    });
+    out.sort(function(a,b){return a.ts-b.ts});
+    return out.length>4000?out.slice(-4000):out;
+  }
+  function loadShelly(){try{return cleanShellyArr(JSON.parse(store.get('fveShelly')||'[]'))}catch(e){return []}}
+  function p2(n){return String(n).padStart(2,'0')}
+  function dayKey(d){return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())}
+  function fmtDT(ms){var d=new Date(ms);return d.getDate()+'. '+(d.getMonth()+1)+'. '+d.getFullYear()+' '+d.getHours()+':'+p2(d.getMinutes())}
+  function ageH(h){if(h<1)return 'před chvílí';if(h<48)return 'před '+Math.floor(h)+' h';var dd=Math.floor(h/24);return 'před '+dd+' '+plural(dd,'dnem','dny','dny')}
+  /* Rozdělí každý interval mezi dvěma odečty na místní kalendářní dny podle překryvu (DST-safe). */
+  function shellyDays(rd){
+    var acc={},resets=[],DAY=86400000,i;
+    for(i=1;i<rd.length;i++){
+      var a=rd[i-1],b=rd[i],di=b.imp-a.imp,de=b.exp-a.exp;
+      if(di<0||de<0){resets.push(b.ts);continue}
+      var t1=a.ts*1000,t2=b.ts*1000,span=t2-t1,cur=t1,guard=0,est=span>26*3600*1000;
+      if(!(span>0))continue;
+      while(cur<t2&&guard++<4000){
+        var dd=new Date(cur),nx=new Date(dd.getFullYear(),dd.getMonth(),dd.getDate()+1).getTime(),end=Math.min(nx,t2),f=(end-cur)/span,k=dayKey(dd),o=acc[k]||(acc[k]={imp:0,exp:0,cov:0,est:false});
+        o.imp+=di*f;o.exp+=de*f;o.cov+=end-cur;if(est)o.est=true;cur=end;
+      }
+    }
+    return {days:acc,resets:resets,DAY:DAY};
+  }
+  function shellySumOf(days,pred){var imp=0,exp=0,any=false;Object.keys(days).forEach(function(k){if(pred(k)){imp+=days[k].imp;exp+=days[k].exp;any=true}});return any?{imp:imp/1000,exp:exp/1000}:null}
+  var DOW_CS=['ne','po','út','st','čt','pá','so'];
+  function renderShelly(){
+    var card=$('shellyCard');
+    if(!shellyData.length){card.hidden=true;return}
+    card.hidden=false;
+    var last=shellyData[shellyData.length-1],hrs=(Date.now()-last.ts*1000)/3600000,stale=hrs>36;
+    $('shellyFresh').innerHTML='Poslední odečet: <b class="'+(stale?'st-warn':'st-ok')+'">'+fmtDT(last.ts*1000)+' ('+ageH(hrs)+')</b>'+(stale?' – Shelly už dlouho nic neposlal, zkontrolujte napájení, Wi‑Fi a skript.':'');
+    var R=shellyDays(shellyData),days=R.days,now=new Date(),today=dayKey(now),
+        yKey=dayKey(new Date(now.getFullYear(),now.getMonth(),now.getDate()-1)),
+        w0=dayKey(new Date(now.getFullYear(),now.getMonth(),now.getDate()-7)),
+        mKey=today.slice(0,7),pm=new Date(now.getFullYear(),now.getMonth()-1,1),pKey=dayKey(pm).slice(0,7);
+    var gp=parseFloat(store.get('fveGridPrice')),hasP=isFinite(gp)&&gp>0;
+    var rows=[['Včera',shellySumOf(days,function(k){return k===yKey})],
+              ['Posl. 7 dní',shellySumOf(days,function(k){return k>=w0&&k<today})],
+              ['Tento měsíc',shellySumOf(days,function(k){return k.slice(0,7)===mKey})],
+              ['Minulý měsíc',shellySumOf(days,function(k){return k.slice(0,7)===pKey})]];
+    var h='<div class="rep-scroll"><table class="rep-table sh-table"><thead><tr><th>Období</th><th>Odběr</th><th>Přetok</th>'+(hasP?'<th>Náklady</th>':'')+'</tr></thead><tbody>';
+    rows.forEach(function(r){var v=r[1];h+='<tr><td>'+r[0]+'</td><td>'+(v?f1(v.imp):'–')+'</td><td>'+(v?f1(v.exp):'–')+'</td>'+(hasP?'<td>'+(v?kc(v.imp*gp):'–')+'</td>':'')+'</tr>'});
+    $('shellySum').innerHTML=h+'</tbody></table></div>';
+    var keys=Object.keys(days).filter(function(k){return days[k].cov>=12*3600*1000}).sort().reverse().slice(0,14),mx=0;
+    keys.forEach(function(k){mx=Math.max(mx,days[k].imp)});
+    $('shellyDays').innerHTML=keys.map(function(k){
+      var dt=new Date(Number(k.slice(0,4)),Number(k.slice(5,7))-1,Number(k.slice(8,10))),o=days[k],pct=mx>0?Math.max(2,Math.round(o.imp/mx*100)):2;
+      return '<li><span>'+DOW_CS[dt.getDay()]+' '+dt.getDate()+'. '+(dt.getMonth()+1)+'.</span><span class="bar" aria-hidden="true"><i style="width:'+pct+'%"></i></span><b>'+(o.est?'≈ ':'')+f1(o.imp/1000)+' kWh'+(o.exp>=50?' <small>přetok '+f1(o.exp/1000)+'</small>':'')+'</b></li>';
+    }).join('');
+    var notes=['Odběr a přetok jsou v kWh. Denní hodnoty vznikají z rozdílu odečtů v 0:00 (odebraná energie ze sítě a energie dodaná do sítě).'];
+    if(hasP)notes.push('Náklady jsou odhad podle poslední ceny dokupu ('+f2(gp)+' Kč/kWh).');
+    if(keys.some(function(k){return days[k].est}))notes.push('Znak ≈ značí den vypočtený z delšího období bez odečtu (rozděleno rovnoměrně).');
+    if(R.resets.length)notes.push('Čítač Shelly byl '+fmtDT(R.resets[R.resets.length-1]*1000)+' vynulován; tento interval se nezapočítal.');
+    notes.push('Hodnoty ze Shelly nejsou cejchovaný elektroměr; pro vyúčtování platí elektroměr distributora.');
+    $('shellyNote').textContent=notes.join(' ');
+  }
+  async function pullShelly(verbose,force){
+    var cfg=syncConfig();
+    if(!cfg){if(verbose)say('shellyStatus','Nejdřív vyplňte adresu databáze a Web API klíč a přihlaste se.',true);return}
+    if(shellyPulling)return;
+    var gap=shellyDeniedAt?6*3600000:(shellyData.length?5*60000:30*60000);
+    if(!force&&Date.now()-Math.max(shellyLastPull,shellyDeniedAt)<gap)return;
+    shellyPulling=true;
+    try{
+      if(!authState||(authState.expiresAt&&authState.expiresAt<Date.now()+60000)){
+        if(!(await refreshAuth())){if(verbose)say('shellyStatus','Nejdřív se přihlaste ke svému účtu Firebase.',true);return}
+      }
+      if(verbose)say('shellyStatus','Načítám odečty ze Shelly…');
+      shellyLastPull=Date.now();
+      var res=await cloudGet(cfg.url+'/shelly/'+encodeURIComponent(authState.localId)+'.json?auth='+encodeURIComponent(authState.idToken));
+      if(res.status===401||res.status===403){shellyDeniedAt=Date.now();throw new Error('Přístup zamítnut. Do pravidel Firebase přidejte část „shelly“ (viz návod výše).')}
+      if(!res.ok)throw new Error('Cloud nelze přečíst (HTTP '+res.status+').');
+      shellyDeniedAt=0;
+      var obj=await res.json(),arr=[];
+      if(obj&&typeof obj==='object'&&!Array.isArray(obj))Object.keys(obj).forEach(function(k){var v=obj[k];if(v&&typeof v==='object')arr.push({ts:Number(k),imp:v.imp,exp:v.exp})});
+      var remote=cleanShellyArr(arr),merged=cleanShellyArr(shellyData.concat(remote));
+      shellyData=merged;store.set('fveShelly',JSON.stringify(merged));
+      renderShelly();renderStatus();
+      if(verbose){
+        if(!remote.length)say('shellyStatus','Ve Firebase zatím nejsou žádné odečty ze Shelly. Zkontrolujte, že skript běží (v konzoli skriptu by měl být výpis „odeslano“).',true);
+        else{var l=merged[merged.length-1];say('shellyStatus','Načteno '+remote.length+' odečtů. Poslední: '+fmtDT(l.ts*1000)+'.')}
+      }
+    }catch(err){if(verbose)say('shellyStatus',(err&&err.message)||'Načtení se nezdařilo.',true)}
+    finally{shellyPulling=false}
+  }
+  function shellyScript(){
+    var cfg=syncConfig(),uid=authState&&authState.localId;
+    return SHELLY_TPL.replace('"DOPLNIT_URL"',function(){return cfg?JSON.stringify(cfg.url):'"DOPLNIT_URL"'}).replace('"DOPLNIT_UID"',function(){return uid?JSON.stringify(uid):'"DOPLNIT_UID"'});
+  }
+  async function fillShellyScript(){
+    if(!authState&&syncConfig()){try{await refreshAuth()}catch(e){}}
+    $('shellyScriptText').value=shellyScript();
+    var ready=!!(syncConfig()&&authState&&authState.localId);
+    if(!ready)say('shellyStatus','Skript zatím obsahuje zástupné hodnoty. Vyplňte adresu databáze a klíč, přihlaste se a otevřete tuto sekci znovu.',true);
+    else say('shellyStatus','');
+    return ready;
+  }
+  function copyWithStatus(txt,statusId,okMsg,warn){
+    function legacy(){
+      var t=document.createElement('textarea');t.value=txt;t.setAttribute('readonly','');t.style.cssText='position:fixed;top:0;left:0;opacity:0;font-size:16px';
+      document.body.appendChild(t);t.focus();t.select();try{t.setSelectionRange(0,t.value.length)}catch(e){}
+      var ok=false;try{ok=document.execCommand('copy')}catch(e){}
+      t.remove();say(statusId,ok?okMsg:'Kopírování není dostupné. Označte text v poli a zkopírujte ho ručně.',!ok||!!warn);
+    }
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(function(){say(statusId,okMsg,!!warn)},legacy);else legacy();
+  }
+  $('shellySetup').addEventListener('toggle',function(){if($('shellySetup').open)fillShellyScript()});
+  $('shellyCopy').addEventListener('click',async function(){
+    var ready=await fillShellyScript();
+    copyWithStatus($('shellyScriptText').value,'shellyStatus',ready?'Skript zkopírován. Vložte ho do nového skriptu v Shelly.':'Zkopírováno, ale skript ještě obsahuje zástupné hodnoty (DOPLNIT_URL / DOPLNIT_UID). Nejdřív se přihlaste.',!ready);
+  });
+  $('shellyPull').addEventListener('click',function(){pullShelly(true,true)});
+  var prevDoSync2=doSync;
+  doSync=async function(manual){
+    await prevDoSync2(manual);
+    try{await pullShelly(false,!!manual)}catch(e){}
+  };
+  function renderExtras(){renderAlerts();renderPayback();renderPriceHistory();renderStatus();renderCharts();renderPeriod();renderCar();renderFuel();renderReport();renderShelly()}
   resetCarForm();
   setNav(store.get('fveTab'));
 
