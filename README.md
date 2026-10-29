@@ -1,7 +1,7 @@
 # Sledování elektřiny
 Nahraj všech 7 souborů (index.html, manifest.webmanifest, sw.js, apple-touch-icon.png, icon-192.png, icon-512.png, README.md; soubor shelly-pro3em.js nahrávat nemusíš, je to kopie skriptu pro Shelly) do kořene repozitáře na GitHubu. Starý `icon-512.PNG` a soubory `.txt` smaž.
 Na iPhonu otevři stránku v Safari -> Sdílet -> Přidat na plochu.
-Po aktualizaci aplikaci na iPhonu zavři (přejetím nahoru) a otevři znovu; případně ji jednou otevři v Safari, ať se nahraje nová verze (cache fve-v24).
+Po aktualizaci aplikaci na iPhonu zavři (přejetím nahoru) a otevři znovu; případně ji jednou otevři v Safari, ať se nahraje nová verze (cache fve-v25).
 Roční shrnutí: tlačítko „Otevřít report · PDF“ otevře náhled. „Uložit / sdílet PDF“ na iPhonu otevře sdílení (Uložit do Souborů), na počítači stáhne PDF; „Sdílet text“ / „Zkopírovat text“ pošle shrnutí jako text; „Tisk“ je jen mimo iPhone.
 
 Automatický odečet ze Shelly Pro 3EM (jednou denně v 0:00):
@@ -18,4 +18,6 @@ Denní sledování (Elektřina → Odběr ze sítě (Shelly Pro 3EM)):
 - Úvodní stránka (karty Odběr a Přetok podle zvoleného období), roční shrnutí a PDF mají sloupec „Shelly odběr“; CSV obsahuje řádky „Shelly den“, JSON záloha obsahuje odečty ze Shelly.
 
 Měsíční odečet elektroměru (záložka Zadat): ve výchozím stavu se zadává jen celkový stav elektroměru (součet VT a NT) a jedna průměrná cena. Volba „Zadávat VT a NT zvlášť“ vrací původní zadávání. Starší odečty s VT a NT zůstávají beze změny a po nich lze pokračovat celkovým stavem (počáteční stav se spočítá jako VT + NT). Po odečtu zadaném celkem už nelze přejít zpět na VT/NT. Ceník se v tomto režimu zadává jako jedna cena. Export po měsících má nový sloupec „Elektroměr celkem (kWh)“.
+
+Grafy (výroba FVE, spotřeba elektroměru, nabíjení auta, odběr ze Shelly): klepnutím na sloupec se pod grafem zobrazí hodnota daného měsíce (u Shelly dne nebo roku) a sloupec se zvýrazní. V denním grafu Shelly lze po sloupcích táhnout prstem.
 

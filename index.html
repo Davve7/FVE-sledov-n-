@@ -107,6 +107,10 @@ body{padding-bottom:calc(90px + env(safe-area-inset-bottom)) !important}
 .st-row:last-child{border-bottom:0}.st-row span:first-child{color:var(--muted)}.st-row b{text-align:right}
 .st-ok{color:var(--save)}.st-warn{color:var(--cost)}
 .chart svg{width:100%;height:auto;display:block}.chart text{fill:var(--muted);font-size:9px;font-family:inherit}
+.chart svg[data-tips]{touch-action:pan-y;-webkit-user-select:none;user-select:none;cursor:pointer;-webkit-tap-highlight-color:transparent;outline:none}
+.chart svg[data-tips]:focus-visible{outline:2px solid var(--sun);outline-offset:2px;border-radius:6px}
+.chart .selcol{fill:var(--muted);fill-opacity:.18;pointer-events:none}
+.chart-tip{margin-top:8px;min-height:20px;font-size:14px;font-weight:700;color:var(--fg)}.chart-tip.idle{font-size:13px;font-weight:400;color:var(--muted)}
 .btnrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 
 @media(max-width:820px){textarea{font-size:16px !important}}
@@ -1839,11 +1843,39 @@ details[open] summary { margin-bottom: 10px; }
   $('periodSeg').addEventListener('click',function(ev){var b=ev.target.closest('button[data-per]');if(!b)return;store.set('fvePeriod2',b.getAttribute('data-per'));renderPeriod();renderStats();renderShellyStats();renderCar()});
 
   var MLET=['L','Ú','B','D','K','Č','Č','S','Z','Ř','L','P'];
-  function barChart(groups,max,labels){
+  /* Hodnota po klepnutí / tažení prstem po sloupcích: tips = pole textů, jeden na sloupec */
+  function tipEsc(t){return String(t).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+  function tipAttrs(tips,pl,cw,n){return tips&&tips.length?' data-pl="'+pl+'" data-cw="'+cw+'" data-n="'+n+'" data-tips="'+tipEsc(JSON.stringify(tips))+'" tabindex="0"':''}
+  function tipSel(tips,pt,ch,cw){return tips&&tips.length?'<rect class="selcol" x="0" y="'+pt+'" width="'+cw+'" height="'+(ch+4)+'" rx="2" style="display:none"/>':''}
+  function tipBox(tips,what){return tips&&tips.length?'<div class="chart-tip idle" role="status" aria-live="polite">Klepni na '+what+' v grafu – zobrazí se hodnota.</div>':''}
+  function tipShow(svg,i,tips){
+    var c=svg.closest('.chart'),col=svg.querySelector('.selcol'),pl=+svg.getAttribute('data-pl'),cw=+svg.getAttribute('data-cw'),t=c?c.querySelector('.chart-tip'):null;
+    svg.setAttribute('data-sel',String(i));
+    if(col){col.setAttribute('x',String(pl+i*cw));col.style.display=''}
+    if(t){t.textContent=tips[i]||'';t.classList.remove('idle')}
+  }
+  function tipFromEvent(svg,ev){
+    var tips;try{tips=JSON.parse(svg.getAttribute('data-tips')||'[]')}catch(e){return}
+    var r=svg.getBoundingClientRect(),vb=svg.viewBox.baseVal,sc=vb&&vb.width?r.width/vb.width:1,pl=+svg.getAttribute('data-pl'),cw=+svg.getAttribute('data-cw'),n=+svg.getAttribute('data-n');
+    var i=Math.floor(((ev.clientX-r.left)/sc-pl)/cw);
+    if(i>=0&&i<n)tipShow(svg,i,tips);
+  }
+  var tipDown=false;
+  document.addEventListener('pointerdown',function(ev){var svg=ev.target.closest&&ev.target.closest('.chart svg[data-tips]');if(!svg)return;tipDown=true;tipFromEvent(svg,ev)});
+  document.addEventListener('pointermove',function(ev){if(!tipDown)return;var svg=ev.target.closest&&ev.target.closest('.chart svg[data-tips]');if(svg)tipFromEvent(svg,ev)});
+  ['pointerup','pointercancel'].forEach(function(n){document.addEventListener(n,function(){tipDown=false})});
+  document.addEventListener('keydown',function(ev){
+    var svg=ev.target&&ev.target.matches&&ev.target.matches('.chart svg[data-tips]')?ev.target:null;if(!svg)return;
+    var d=ev.key==='ArrowRight'?1:ev.key==='ArrowLeft'?-1:0;if(!d)return;
+    var tips;try{tips=JSON.parse(svg.getAttribute('data-tips')||'[]')}catch(e){return}
+    var cur=svg.getAttribute('data-sel'),i=cur==null?(d>0?0:tips.length-1):Math.min(tips.length-1,Math.max(0,+cur+d));
+    ev.preventDefault();tipShow(svg,i,tips);
+  });
+  function barChart(groups,max,labels,tips){
     var wasStacked=groups.stacked;groups=groups.map(function(g){return g.map(function(v){return isFinite(v)&&v>0?v:0})});if(wasStacked)groups.stacked=true;
     if(!isFinite(max)||max<=0)max=10;
     // groups: [[v1,v2,..] per month]; draws grouped (or stacked if stacked flag set on groups.stacked)
-    var W=360,H=170,pl=28,pb=18,pt=8,cw=(W-pl)/12,ch=H-pb-pt,svg='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Sloupcový graf po měsících">';
+    var W=360,H=170,pl=28,pb=18,pt=8,cw=(W-pl)/12,ch=H-pb-pt,svg='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Sloupcový graf po měsících"'+tipAttrs(tips,pl,cw,12)+'>'+tipSel(tips,pt,ch,cw);
     for(var t=0;t<=4;t++){var y=pt+ch-ch*t/4;svg+='<line x1="'+pl+'" x2="'+W+'" y1="'+y+'" y2="'+y+'" style="stroke:var(--line)" stroke-width="1"/><text x="'+(pl-4)+'" y="'+(y+3)+'" text-anchor="end">'+Math.round(max*t/4)+'</text>'}
     for(var i=0;i<12;i++){
       var g=groups[i]||[],x0=pl+i*cw+cw*.12,bw=cw*.76;
@@ -1851,19 +1883,20 @@ details[open] summary { margin-bottom: 10px; }
       else{var n=g.length,w2=bw/n;g.forEach(function(v,k){if(!(v>0))return;var hh=ch*v/max;svg+='<rect x="'+(x0+k*w2)+'" width="'+(w2-1)+'" y="'+(pt+ch-hh)+'" height="'+hh+'" rx="1.5" style="fill:'+(k===0?'var(--sun)':'var(--muted)')+';opacity:'+(k===0?1:.55)+'"/>'})}
       svg+='<text x="'+(pl+i*cw+cw/2)+'" y="'+(H-5)+'" text-anchor="middle">'+MLET[i]+'</text>';
     }
-    return '<div class="chart">'+svg+'</svg></div>';
+    return '<div class="chart">'+svg+'</svg>'+tipBox(tips,'měsíc')+'</div>';
   }
   function niceMax(v){if(!(v>0)||!isFinite(v))return 10;var p=Math.pow(10,Math.floor(Math.log10(v))),f=v/p;return (f<=1?1:f<=2?2:f<=5?5:10)*p}
   function renderCharts(){
-    var ys=allYears(),cur=ys.length?ys[ys.length-1]:new Date().getFullYear(),prev=cur-1,gs=[],mx=0;
-    for(var m=1;m<=12;m++){var a=monthFve(cur,m),b=monthFve(prev,m),va=a?a.e:0,vb=b?b.e:0;mx=Math.max(mx,va,vb);gs.push([va,vb])}
+    var ys=allYears(),cur=ys.length?ys[ys.length-1]:new Date().getFullYear(),prev=cur-1,gs=[],mx=0,tf=[];
+    for(var m=1;m<=12;m++){var a=monthFve(cur,m),b=monthFve(prev,m),va=a?a.e:0,vb=b?b.e:0;mx=Math.max(mx,va,vb);gs.push([va,vb]);tf.push(MN[m-1]+' – '+cur+': '+(va>0?f1(va)+' kWh':'bez záznamu')+' · '+prev+': '+(vb>0?f1(vb)+' kWh':'bez záznamu'))}
     $('fveChartCur').textContent=String(cur);$('fveChartPrev').textContent=String(prev);
-    $('fveChart').innerHTML=mx>0?barChart(gs,niceMax(mx)):'<p class="hint">Graf se zobrazí po uložení prvních odečtů FVE.</p>';
+    $('fveChart').innerHTML=mx>0?barChart(gs,niceMax(mx),null,tf):'<p class="hint">Graf se zobrazí po uložení prvních odečtů FVE.</p>';
     var my=sortedByDate(meterReadings).map(function(r){return Number(r.date.slice(0,4))}),yr=my.length?my[my.length-1]:new Date().getFullYear(),g2=[],mx2=0;
     var splitY=false,singleY=false;for(var k=1;k<=12;k++){var vt=0,nt=0;sortedByDate(meterReadings).filter(function(r){return Number(r.date.slice(0,4))===yr&&Number(r.date.slice(5,7))===k}).forEach(function(r){var q=meterDelta(r);if(r.single)singleY=true;else splitY=true;vt+=Math.max(0,q.vt);nt+=Math.max(0,q.nt)});g2.push([vt,nt]);mx2=Math.max(mx2,vt+nt)}
     g2.stacked=true;
+    var tm=g2.map(function(g,k){return MN[k]+' '+yr+': '+(g[0]+g[1]>0?(splitY?'VT '+f1(g[0])+' kWh · NT '+f1(g[1])+' kWh · celkem '+f1(g[0]+g[1])+' kWh':f1(g[0]+g[1])+' kWh'):'bez odečtu')});
     $('meterChartYear').textContent=String(yr);
-    $('meterChart').innerHTML=mx2>0?barChart(g2,niceMax(mx2)):'<p class="hint">Graf se zobrazí po uložení prvních odečtů elektroměru.</p>';
+    $('meterChart').innerHTML=mx2>0?barChart(g2,niceMax(mx2),null,tm):'<p class="hint">Graf se zobrazí po uložení prvních odečtů elektroměru.</p>';
     $('meterLegend').innerHTML=splitY?'<span><i style="background:var(--sun)"></i>VT</span><span><i style="background:var(--grid)"></i>NT</span>':'<span><i style="background:var(--sun)"></i>Spotřeba (kWh)</span>';
     $('meterChartNote').textContent=mx2>0?(splitY?'Spotřeba v kWh: VT dole, NT nahoře.'+(singleY?' Odečty zadané celkem jsou v grafu vedené pod VT.':''):'Spotřeba v kWh za měsíc.'):'';
   }
@@ -1951,9 +1984,9 @@ details[open] summary { margin-bottom: 10px; }
     h+=stRow('Celkem',f1(all.k)+' kWh · '+kc(all.c)+' ('+all.n+'×)');
     if(all.n)h+=stRow('Průměr na nabití',f1(all.k/all.n)+' kWh');
     $('carSummary').innerHTML=rows.length?h:'<p class="hint">Zatím žádné nabití. Přidej první v kartě výše.</p>';
-    var ys=rows.map(function(r){return Number(r.date.slice(0,4))}),yr=ys.length?ys[ys.length-1]:now.getFullYear(),gs=[],mx=0;
-    for(var m=1;m<=12;m++){var t=0;rows.forEach(function(r){if(Number(r.date.slice(0,4))===yr&&Number(r.date.slice(5,7))===m)t+=r.kwh});gs.push([t]);mx=Math.max(mx,t)}
-    $('carChartYear').textContent=String(yr);$('carChart').innerHTML=mx>0?barChart(gs,niceMax(mx)):'<p class="hint">Graf se zobrazí po prvním nabití.</p>';
+    var ys=rows.map(function(r){return Number(r.date.slice(0,4))}),yr=ys.length?ys[ys.length-1]:now.getFullYear(),gs=[],mx=0,tc=[];
+    for(var m=1;m<=12;m++){var t=0,cc=0;rows.forEach(function(r){if(Number(r.date.slice(0,4))===yr&&Number(r.date.slice(5,7))===m){t+=r.kwh;cc+=carCost(r)}});gs.push([t]);mx=Math.max(mx,t);tc.push(MN[m-1]+' '+yr+': '+(t>0?f1(t)+' kWh · '+kc(cc):'bez nabíjení'))}
+    $('carChartYear').textContent=String(yr);$('carChart').innerHTML=mx>0?barChart(gs,niceMax(mx),null,tc):'<p class="hint">Graf se zobrazí po prvním nabití.</p>';
     var list=rows.slice().reverse().slice(0,40);
     $('carList').innerHTML=list.length?list.map(function(r){var p=r.date.split(' ')[0].split('-');return '<div class="workflow-item"><div><strong>'+Number(p[2])+'. '+Number(p[1])+'. '+p[0]+'</strong><br><span class="hint">'+f1(r.kwh)+' kWh · '+f2(carCost(r))+' Kč ('+f2(Number(r.price)||0)+' Kč/kWh)</span></div><div class="workflow-actions"><button type="button" data-car="'+r.date+'" data-act2="edit">Upravit</button><button type="button" class="delete" data-car="'+r.date+'" data-act2="del">Smazat</button></div></div>'}).join(''):'<p class="hint">Žádné záznamy.</p>';
     var per=store.get('fvePeriod2')||'month',pfx=per==='month'?cm:per==='cur'?String(now.getFullYear()):per==='prev'?String(now.getFullYear()-1):'';
@@ -2265,10 +2298,11 @@ details[open] summary { margin-bottom: 10px; }
     return '<div class="rep-scroll"><table class="rep-table sh-table"><thead>'+tr(head,'th')+'</thead><tbody>'+rows.map(function(r){return tr(r,'td')}).join('')+'</tbody>'+(foot?'<tfoot>'+tr(foot,'td')+'</tfoot>':'')+'</table></div>';
   }
   /* Sloupcový graf s libovolným počtem sloupců: items = [{l:popisek,a:odběr,b:přetok,est:bool}] */
-  function shBars(items,max,every,aria){
+  function shBars(items,max,every,aria,hint){
     var n=items.length;if(!n)return '';
+    var tips=items.map(function(it){return it.t||''});if(!tips.some(Boolean))tips=null;
     if(!isFinite(max)||max<=0)max=10;
-    var W=360,H=170,pl=30,pb=18,pt=8,cw=(W-pl)/n,ch=H-pb-pt,hasB=items.some(function(x){return x.b>0}),svg='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+aria+'">';
+    var W=360,H=170,pl=30,pb=18,pt=8,cw=(W-pl)/n,ch=H-pb-pt,hasB=items.some(function(x){return x.b>0}),svg='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+aria+'"'+tipAttrs(tips,pl,cw,n)+'>'+tipSel(tips,pt,ch,cw);
     for(var t=0;t<=4;t++){var y=pt+ch-ch*t/4,v=max*t/4;svg+='<line x1="'+pl+'" x2="'+W+'" y1="'+y+'" y2="'+y+'" style="stroke:var(--line)" stroke-width="1"/><text x="'+(pl-4)+'" y="'+(y+3)+'" text-anchor="end">'+(max>=8?Math.round(v):Math.round(v*10)/10)+'</text>'}
     items.forEach(function(it,i){
       var a=isFinite(it.a)&&it.a>0?it.a:0,b=isFinite(it.b)&&it.b>0?it.b:0,x0=pl+i*cw+cw*.1,bw=cw*.8,wa=hasB?bw*.55:bw,op=it.est?.55:1;
@@ -2276,8 +2310,9 @@ details[open] summary { margin-bottom: 10px; }
       if(b>0)svg+='<rect x="'+(x0+wa)+'" width="'+Math.max(1,bw-wa)+'" y="'+(pt+ch-ch*Math.min(b,max)/max)+'" height="'+ch*Math.min(b,max)/max+'" rx="1" style="fill:var(--sun);opacity:'+op+'"/>';
       if(i%every===0||i===n-1&&every===1)svg+='<text x="'+(pl+i*cw+cw/2)+'" y="'+(H-5)+'" text-anchor="middle">'+it.l+'</text>';
     });
-    return '<div class="chart">'+svg+'</svg></div>';
+    return '<div class="chart">'+svg+'</svg>'+tipBox(tips,hint||'sloupec')+'</div>';
   }
+  function shTip(lab,a,b,est,empty){return lab+': '+(empty?'bez dat':'odběr '+f1(a)+' kWh'+(b>0?' · přetok '+f1(b)+' kWh':'')+(est?' (odhad)':''))}
   function shellyPred(per){
     var now=new Date(),y=now.getFullYear(),mk=y+'-'+p2(now.getMonth()+1);
     if(per==='month')return function(k){return k.slice(0,7)===mk};
@@ -2323,8 +2358,8 @@ details[open] summary { margin-bottom: 10px; }
     if(v==='day'){
       var y=shSel.y,m=shSel.m,mk=y+'-'+p2(m),dim=new Date(y,m,0).getDate(),items=[],mx=0,d,k,o;
       label=MN_CS[m-1]+' '+y;canPrev=y*12+m>fy*12+fm;canNext=y*12+m<ly*12+lm;
-      for(d=1;d<=dim;d++){k=mk+'-'+p2(d);o=days[k];var a=o?o.imp/1000:0,bb=o?o.exp/1000:0;items.push({l:String(d),a:a,b:bb,est:!!(o&&o.est)});mx=Math.max(mx,a,bb);if(bb>0)legendB=true;if(o&&o.est)estAny=true}
-      chart=mx>0?shBars(items,niceMax(mx),dim>16?5:1,'Denní odběr ze sítě v kWh, '+label):'<p class="hint">V tomto měsíci zatím nejsou denní hodnoty.</p>';
+      for(d=1;d<=dim;d++){k=mk+'-'+p2(d);o=days[k];var a=o?o.imp/1000:0,bb=o?o.exp/1000:0;items.push({l:String(d),a:a,b:bb,est:!!(o&&o.est),t:shTip(d+'. '+m+'. '+y,a,bb,!!(o&&o.est),!o)});mx=Math.max(mx,a,bb);if(bb>0)legendB=true;if(o&&o.est)estAny=true}
+      chart=mx>0?shBars(items,niceMax(mx),dim>16?5:1,'Denní odběr ze sítě v kWh, '+label,'den (nebo táhni prstem)'):'<p class="hint">V tomto měsíci zatím nejsou denní hodnoty.</p>';
       var cur=shellyRange(days,function(k2){return k2.slice(0,7)===mk}),lines=[];
       if(cur){
         lines.push(['Odběr ze sítě',f1(cur.imp)+' kWh']);lines.push(['Přetok do sítě',f1(cur.exp)+' kWh']);
@@ -2357,7 +2392,7 @@ details[open] summary { margin-bottom: 10px; }
       label=String(yy);canPrev=yy>fy;canNext=yy<ly;
       for(mm=1;mm<=12;mm++){
         var sm=shellyMonthSum(yy,mm),lm2=shellyMonthSum(yy-1,mm);
-        its.push({l:MLET[mm-1],a:sm?sm.imp:0,b:sm?sm.exp:0});if(sm){mx3=Math.max(mx3,sm.imp,sm.exp);if(sm.exp>0)legendB=true;tI+=sm.imp;tE+=sm.exp;tfull+=sm.full}
+        its.push({l:MLET[mm-1],a:sm?sm.imp:0,b:sm?sm.exp:0,t:shTip(MN_CS[mm-1]+' '+yy,sm?sm.imp:0,sm?sm.exp:0,false,!sm)});if(sm){mx3=Math.max(mx3,sm.imp,sm.exp);if(sm.exp>0)legendB=true;tI+=sm.imp;tE+=sm.exp;tfull+=sm.full}
         if(lm2)anyLast=true;
         if(sm&&lm2&&lm2.imp>0&&sm.n>=new Date(yy,mm,0).getDate()-1&&lm2.n>=new Date(yy-1,mm,0).getDate()-1){cI+=sm.imp;pI+=lm2.imp;both++}
         if(sm||lm2)rows.push([MN_CS[mm-1],sm?f1(sm.imp):'–',sm?f1(sm.exp):'–'].concat(hasP?[sm?kc(sm.imp*pr):'–']:[]).concat(anyLast||lm2?[lm2?f1(lm2.imp):'–']:[]));
@@ -2366,7 +2401,7 @@ details[open] summary { margin-bottom: 10px; }
       var head=['Měsíc','Odběr','Přetok'].concat(hasP?['Náklady']:[]).concat(lastCol?['Loni']:[]);
       rows=rows.map(function(r){var need=head.length;while(r.length<need)r.push('–');return r});
       var foot=['Celkem',f1(tI),f1(tE)].concat(hasP?[kc(tI*pr)]:[]).concat(lastCol?['']:[]);
-      chart=mx3>0?shBars(its,niceMax(mx3),1,'Měsíční odběr ze sítě v kWh, '+label):'<p class="hint">V tomto roce zatím nejsou data.</p>';
+      chart=mx3>0?shBars(its,niceMax(mx3),1,'Měsíční odběr ze sítě v kWh, '+label,'měsíc'):'<p class="hint">V tomto roce zatím nejsou data.</p>';
       var lines2=[['Odběr ze sítě',f1(tI)+' kWh'],['Přetok do sítě',f1(tE)+' kWh']];
       if(tfull)lines2.push(['Průměr za den',f1(tI/tfull)+' kWh']);
       if(hasP)lines2.push(['Náklady (odhad)',kc(tI*pr)]);
@@ -2378,10 +2413,10 @@ details[open] summary { margin-bottom: 10px; }
       var its2=[],rows2=[],mx4=0,yv;
       for(yv=fy;yv<=ly;yv++){
         var ry=shellyRange(days,function(k2){return k2.slice(0,4)===String(yv)});
-        its2.push({l:String(yv),a:ry?ry.imp:0,b:ry?ry.exp:0});
+        its2.push({l:String(yv),a:ry?ry.imp:0,b:ry?ry.exp:0,t:shTip(String(yv),ry?ry.imp:0,ry?ry.exp:0,false,!ry)});
         if(ry){mx4=Math.max(mx4,ry.imp,ry.exp);if(ry.exp>0)legendB=true;rows2.push([String(yv),f1(ry.imp),f1(ry.exp),ry.full?f1(ry.imp/ry.full):'–'].concat(hasP?[kc(ry.imp*pr)]:[]))}
       }
-      chart=mx4>0?shBars(its2,niceMax(mx4),1,'Roční odběr ze sítě v kWh'):'';
+      chart=mx4>0?shBars(its2,niceMax(mx4),1,'Roční odběr ze sítě v kWh','rok'):'';
       list=rows2.length?shTable(['Rok','Odběr','Přetok','Ø/den'].concat(hasP?['Náklady']:[]),rows2):'';
       per='';
     }
