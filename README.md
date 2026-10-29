@@ -1,7 +1,7 @@
 # Sledování elektřiny
 Nahraj všech 7 souborů (index.html, manifest.webmanifest, sw.js, apple-touch-icon.png, icon-192.png, icon-512.png, README.md; soubor shelly-pro3em.js nahrávat nemusíš, je to kopie skriptu pro Shelly) do kořene repozitáře na GitHubu. Starý `icon-512.PNG` a soubory `.txt` smaž.
 Na iPhonu otevři stránku v Safari -> Sdílet -> Přidat na plochu.
-Po aktualizaci aplikaci na iPhonu zavři (přejetím nahoru) a otevři znovu; případně ji jednou otevři v Safari, ať se nahraje nová verze (cache fve-v22).
+Po aktualizaci aplikaci na iPhonu zavři (přejetím nahoru) a otevři znovu; případně ji jednou otevři v Safari, ať se nahraje nová verze (cache fve-v23).
 Roční shrnutí: tlačítko „Otevřít report · PDF“ otevře náhled. „Uložit / sdílet PDF“ na iPhonu otevře sdílení (Uložit do Souborů), na počítači stáhne PDF; „Sdílet text“ / „Zkopírovat text“ pošle shrnutí jako text; „Tisk“ je jen mimo iPhone.
 
 Automatický odečet ze Shelly Pro 3EM (jednou denně v 0:00):
@@ -10,3 +10,10 @@ Automatický odečet ze Shelly Pro 3EM (jednou denně v 0:00):
 3. V rozhraní Shelly: Scripts → Add script → vlož, ulož, zapni „Run on startup“ a spusť. Hned se pošle zkušební odečet; dál každý den v 0:00.
 4. V aplikaci „Načíst odečty ze Shelly“ → na kartě Elektřina se objeví denní odběr a přetok.
 Časové pásmo v Shelly musí být Europe/Prague, jinak se odečet pošle v 0:00 jiného pásma.
+
+Denní sledování (Elektřina → Odběr ze sítě (Shelly Pro 3EM)):
+- Přepínač Den / Měsíc / Rok: Den = sloupce po dnech za zvolený měsíc (šipky ‹ › listují měsíci), Měsíc = 12 měsíců roku, Rok = roky.
+- Nahoře přehled Včera / Posl. 7 dní / Tento měsíc / Minulý měsíc a srovnání s minulým obdobím (proti loňsku srovnává jen úplné měsíce).
+- Pole „Průměrná cena odběru (Kč/kWh)“: Shelly neumí VT/NT, náklady se proto počítají z jedné průměrné ceny. Měsíční odečet elektroměru s VT/NT zůstává ručně, jak byl.
+- Úvodní stránka (karty Odběr a Přetok podle zvoleného období), roční shrnutí a PDF mají sloupec „Shelly odběr“; CSV obsahuje řádky „Shelly den“, JSON záloha obsahuje odečty ze Shelly.
+
