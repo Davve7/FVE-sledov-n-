@@ -436,9 +436,8 @@ details[open] summary { margin-bottom: 10px; }
     <div class="stat"><span class="k">Celková spotřeba</span><span class="v" id="sCon">0,0 kWh</span><span class="m c-sun" id="sShare">Podíl FVE: 0 %</span></div>
   </section>
 
-  <section class="stats" aria-label="Odběr a přetok ze sítě podle Shelly" id="shellyStats" hidden>
+  <section class="stats" aria-label="Odběr ze sítě podle Shelly" id="shellyStats" hidden>
     <div class="stat"><span class="k">Odběr ze sítě (Shelly)</span><span class="v c-grid" id="shIn">–</span><span class="m c-cost" id="shInK"></span></div>
-    <div class="stat"><span class="k">Přetok do sítě (Shelly)</span><span class="v c-sun" id="shOut">–</span><span class="m" id="shOutK"></span></div>
   </section>
 
   <section class="stats" aria-label="Přehled aktuálního roku" id="yearDashboard">
@@ -621,7 +620,7 @@ details[open] summary { margin-bottom: 10px; }
             <p>Účty vytvořené přes tlačítko výše jsou samostatné; na všech svých zařízeních použijte stejný e‑mail a heslo.</p>
           </details>
           <details id="shellySetup"><summary style="font-size:14px">Automatický odečet ze Shelly Pro 3EM</summary>
-            <p>Shelly Pro 3EM každý den v 0:00 pošle stav čítačů (odebraná a dodaná energie) do vašeho Firebase. Aplikace si je načte sama a spočítá denní odběr a přetok.</p>
+            <p>Shelly Pro 3EM každý den v 0:00 pošle stav čítačů (odebraná energie ze sítě) do vašeho Firebase. Aplikace si je načte sama a spočítá denní odběr.</p>
             <ol class="hint">
               <li>V pravidlech Firebase (výše) mějte i část „shelly“.</li>
               <li>Přihlaste se tlačítkem „Přihlásit“. Do skriptu se tím doplní adresa databáze a vaše UID.</li>
@@ -1172,15 +1171,15 @@ details[open] summary { margin-bottom: 10px; }
     var meters = typeof meterReadings !== 'undefined' ? sortedByDate(meterReadings) : [];
     if (!d.length && !weeks.length && !meters.length && !liveCount(chargeReadings) && !shellyData.length) { say('bStatus', 'Zatím není co exportovat. Nejdřív ulož alespoň jeden odečet.', true); return; }
     function csvCell(value) { var s = String(value == null ? '' : value); return '"' + s.replace(/"/g, '""') + '"'; }
-    var rows = [['Typ záznamu','Datum','Rok','Měsíc','ISO týden','Výroba FVE (kWh)','Dokup ze sítě (kWh)','Cena FVE (Kč/kWh)','Odhad úspory (Kč)','Náklady na dokup (Kč)','Počáteční FVE stav','Konečný FVE stav','Počáteční stav dokupu','Konečný stav dokupu','Počáteční VT','Konečný VT','Spotřeba VT (kWh)','Cena VT (Kč/kWh)','Počáteční NT','Konečný NT','Spotřeba NT (kWh)','Cena NT (Kč/kWh)','Výměna elektroměru','Nabíjení auta (kWh)','Nabíjení auta (Kč)','Shelly odběr (kWh)','Shelly přetok (kWh)']];
+    var rows = [['Typ záznamu','Datum','Rok','Měsíc','ISO týden','Výroba FVE (kWh)','Dokup ze sítě (kWh)','Cena FVE (Kč/kWh)','Odhad úspory (Kč)','Náklady na dokup (Kč)','Počáteční FVE stav','Konečný FVE stav','Počáteční stav dokupu','Konečný stav dokupu','Počáteční VT','Konečný VT','Spotřeba VT (kWh)','Cena VT (Kč/kWh)','Počáteční NT','Konečný NT','Spotřeba NT (kWh)','Cena NT (Kč/kWh)','Výměna elektroměru','Nabíjení auta (kWh)','Nabíjení auta (Kč)','Shelly odběr (kWh)']];
     d.slice().sort(function(a,b){return a.year-b.year||a.month-b.month;}).forEach(function(x){rows.push(['Měsíční FVE',String(x.year)+'-'+String(x.month).padStart(2,'0'),x.year,x.month,'',x.energy,x.grid,x.savedPrice,x.energy*x.savedPrice,gridCost(x),x.eStart===undefined?'':x.eStart,x.eEnd===undefined?'':x.eEnd,x.gStart===undefined?'':x.gStart,x.gEnd===undefined?'':x.gEnd,x.vtStart===undefined?'':x.vtStart,x.vtEnd===undefined?'':x.vtEnd,x.vtStart===undefined||x.vtEnd===undefined?'':x.vtEnd-x.vtStart,x.priceVT===undefined?'':x.priceVT,x.ntStart===undefined?'':x.ntStart,x.ntEnd===undefined?'':x.ntEnd,x.ntStart===undefined||x.ntEnd===undefined?'':x.ntEnd-x.ntStart,x.priceNT===undefined?'':x.priceNT,'']);});
     weeks.forEach(function(x){var q=weeklyDelta(x),iw=isoWeekInfo(x.date),price=Number.isFinite(Number(x.price))?Number(x.price):4.5,gp=(x.gridPrice!=null&&Number.isFinite(Number(x.gridPrice)))?Number(x.gridPrice):price;rows.push(['Týdenní FVE',x.date,Number(x.date.slice(0,4)),Number(x.date.slice(5,7)),iw?iw.week:'',Math.max(0,q.energy),Math.max(0,q.grid),price,Math.max(0,q.energy)*price,Math.max(0,q.grid)*gp,x.energyStart,x.energy,x.gridStart,x.grid,'','','','','','','','', '']);});
     meters.forEach(function(x){var q=meterDelta(x),sg=!!x.single,cost=Math.max(0,q.vt)*x.priceVT+Math.max(0,q.nt)*x.priceNT;rows.push([sg?'Elektroměr (celkem)':'Elektroměr',x.date,Number(x.date.slice(0,4)),Number(x.date.slice(5,7)),'','','','','',cost,'','','','',x.startVT,x.vt,Math.max(0,q.vt),x.priceVT,sg?'':x.startNT,sg?'':x.nt,sg?'':Math.max(0,q.nt),sg?'':x.priceNT,x.replaced?'Ano':'Ne']);});
     sortedByDate(priceHistory).forEach(function(x){var r=['Ceník od',x.date,Number(x.date.slice(0,4)),Number(x.date.slice(5,7))];while(r.length<23)r.push('');r[17]=x.vt;r[21]=x.nt;rows.push(r)});
     rows.slice(1).forEach(function(r){while(r.length<23)r.push('');r.push('');r.push('')});
     sortedByDate(chargeReadings).forEach(function(x){var r=['Nabíjení auta',x.date.slice(0,10),Number(x.date.slice(0,4)),Number(x.date.slice(5,7))];while(r.length<23)r.push('');r.push(x.kwh);r.push(Math.round(x.kwh*(Number(x.price)||0)*100)/100);rows.push(r)});
-    rows.slice(1).forEach(function(r){while(r.length<25)r.push('');r.push('');r.push('')});
-    var shD=shellyR().days;Object.keys(shD).sort().forEach(function(k){var r=['Shelly den',k,Number(k.slice(0,4)),Number(k.slice(5,7))];while(r.length<25)r.push('');r.push(Math.round(shD[k].imp)/1000);r.push(Math.round(shD[k].exp)/1000);rows.push(r)});
+    rows.slice(1).forEach(function(r){while(r.length<25)r.push('');r.push('')});
+    var shD=shellyR().days;Object.keys(shD).sort().forEach(function(k){var r=['Shelly den',k,Number(k.slice(0,4)),Number(k.slice(5,7))];while(r.length<25)r.push('');r.push(Math.round(shD[k].imp)/1000);rows.push(r)});
     var csv = '\uFEFF' + rows.map(function (row) { return row.map(csvCell).join(';'); }).join('\r\n');
     downloadFile('fve-tracker-export-' + new Date().toISOString().slice(0,10) + '.csv', csv, 'text/csv;charset=utf-8');
     say('bStatus', 'CSV export připraven: ' + d.length + ' měsíčních, ' + weeks.length + ' týdenních a ' + meters.length + ' elektroměrových záznamů. JSON záloha navíc uchovává metadata potřebná k obnově.');
@@ -1903,7 +1902,7 @@ details[open] summary { margin-bottom: 10px; }
 
   $('exportMonthly').addEventListener('click',function(){
     var ys=allYears();sortedByDate(meterReadings).concat(sortedByDate(chargeReadings)).forEach(function(r){var y=Number(r.date.slice(0,4));if(ys.indexOf(y)<0)ys.push(y)});Object.keys(shellyR().days).forEach(function(k){var y=Number(k.slice(0,4));if(ys.indexOf(y)<0)ys.push(y)});ys.sort();
-    var rows=[['Rok','Měsíc','Výroba FVE (kWh)','Dokup ze sítě (kWh)','Spotřeba celkem (kWh)','Podíl FVE (%)','Úspora FVE (Kč)','Náklady dokup (Kč)','Elektroměr VT (kWh)','Elektroměr NT (kWh)','Elektroměr celkem (kWh)','Náklady elektroměr (Kč)','Nabíjení auta (kWh)','Nabíjení auta (Kč)','Shelly odběr (kWh)','Shelly přetok (kWh)']],n=0;
+    var rows=[['Rok','Měsíc','Výroba FVE (kWh)','Dokup ze sítě (kWh)','Spotřeba celkem (kWh)','Podíl FVE (%)','Úspora FVE (Kč)','Náklady dokup (Kč)','Elektroměr VT (kWh)','Elektroměr NT (kWh)','Elektroměr celkem (kWh)','Náklady elektroměr (Kč)','Nabíjení auta (kWh)','Nabíjení auta (Kč)','Shelly odběr (kWh)']],n=0;
     function cell(x){return '"'+String(x==null?'':x).replace(/"/g,'""')+'"'}
     function num(x){return x==null?'':String(Math.round(x*100)/100).replace('.',',')}
     ys.forEach(function(y){for(var m=1;m<=12;m++){
@@ -1913,7 +1912,7 @@ details[open] summary { margin-bottom: 10px; }
       var cK=0,cC=0,hc=false;chargeReadings.filter(function(r){return !r._deleted&&Number(r.date.slice(0,4))===y&&Number(r.date.slice(5,7))===m}).forEach(function(r){hc=true;cK+=r.kwh;cC+=carCost(r)});
       var shm=shellyMonthSum(y,m);
       if(!f&&!hm&&!hc&&!shm)continue;n++;
-      rows.push([y,m,f?num(f.e):'',f?num(f.g):'',f?num(f.e+f.g):'',f&&f.e+f.g>0?num(f.e/(f.e+f.g)*100):'',f?num(f.s):'',f?num(f.c):'',hm&&sp?num(vt):'',hm&&sp?num(nt):'',hm?num(vt+nt):'',hm?num(mc):'',hc?num(cK):'',hc?num(cC):'',shm?num(shm.imp):'',shm?num(shm.exp):'']);
+      rows.push([y,m,f?num(f.e):'',f?num(f.g):'',f?num(f.e+f.g):'',f&&f.e+f.g>0?num(f.e/(f.e+f.g)*100):'',f?num(f.s):'',f?num(f.c):'',hm&&sp?num(vt):'',hm&&sp?num(nt):'',hm?num(vt+nt):'',hm?num(mc):'',hc?num(cK):'',hc?num(cC):'',shm?num(shm.imp):'']);
     }});
     if(!n){say('bStatus','Zatím není co exportovat.',true);return}
     downloadFile('fve-po-mesicich-'+new Date().toISOString().slice(0,10)+'.csv','﻿'+rows.map(function(r){return r.map(cell).join(';')}).join('\r\n'),'text/csv;charset=utf-8');
@@ -2067,7 +2066,7 @@ details[open] summary { margin-bottom: 10px; }
     if(con>0)line('Podíl FVE na spotřebě',Math.round(T.e/con*100)+' %');
     line('Úspora díky FVE',kc(T.s));line('Náklady na dokup',kc(T.c));
     if(T.vt+T.nt>0){if(T.sp)line('Elektroměr VT / NT',f1(T.vt)+' / '+f1(T.nt)+' kWh');else line('Elektroměr celkem',f1(T.vt+T.nt)+' kWh');line('Náklady podle elektroměru',kc(T.mc))}
-    if(anySh){var sp=shellyPrice();line('Odběr ze sítě (Shelly)',f1(T.si)+' kWh'+(sp>0?' · '+kc(T.si*sp):''));line('Přetok do sítě (Shelly)',f1(T.se)+' kWh')}
+    if(anySh){var sp=shellyPrice();line('Odběr ze sítě (Shelly)',f1(T.si)+' kWh'+(sp>0?' · '+kc(T.si*sp):''))}
     if(T.ck>0){line('Nabíjení auta',f1(T.ck)+' kWh · '+kc(T.cc));var fr=fuelCalc(T.ck,T.cc);if(fr)line('Úspora oproti palivu (odhad)',kc(fr.save)+' (cca '+Math.round(fr.km).toLocaleString('cs-CZ')+' km)')}
     var inv=readInvestment();if(inv&&inv.value>0){var S=0;allYears().forEach(function(yy){S+=combinedYearTotals(yy).s});line('Návratnost FVE (celkem)',kc(S)+' z '+kc(inv.value)+' ('+f1(S/inv.value*100)+' %)')}
     var head=['Měsíc','Výroba kWh','Dokup kWh','Úspora','Elektroměr kWh','Auto kWh'],foot=['Celkem',f1(T.e),f1(T.g),kc(T.s),f1(T.vt+T.nt),f1(T.ck)];
@@ -2268,7 +2267,7 @@ details[open] summary { margin-bottom: 10px; }
       if(!(span>0))continue;
       while(cur<t2&&guard++<4000){
         var dd=new Date(cur),nx=new Date(dd.getFullYear(),dd.getMonth(),dd.getDate()+1).getTime(),end=Math.min(nx,t2),f=(end-cur)/span,k=dayKey(dd),o=acc[k]||(acc[k]={imp:0,exp:0,cov:0,est:false});
-        o.imp+=di*f;o.exp+=de*f;o.cov+=end-cur;if(est)o.est=true;cur=end;
+        o.imp+=di*f;o.exp+=0;o.cov+=end-cur;if(est)o.est=true;cur=end;
       }
     }
     return {days:acc,resets:resets,DAY:DAY};
@@ -2326,9 +2325,7 @@ details[open] summary { margin-bottom: 10px; }
     box.hidden=false;
     var r=shellyRange(shellyR().days,shellyPred(store.get('fvePeriod2')||'month')),pr=shellyPrice();
     $('shIn').textContent=r?f1(r.imp)+' kWh':'–';
-    $('shOut').textContent=r?f1(r.exp)+' kWh':'–';
     $('shInK').textContent=r?(pr>0?'Náklady: '+kc(r.imp*pr):(r.full?'Průměr: '+f1(r.imp/r.full)+' kWh/den':'')):'';
-    $('shOutK').textContent=r&&r.full?'Průměr: '+f1(r.exp/r.full)+' kWh/den':'';
   }
   function renderShelly(){
     var card=$('shellyCard');
@@ -2342,10 +2339,10 @@ details[open] summary { margin-bottom: 10px; }
         mKey=today.slice(0,7),pKey=dayKey(new Date(now.getFullYear(),now.getMonth()-1,1)).slice(0,7),pr=shellyPrice(),hasP=pr>0;
     var inp=$('shellyPrice');if(document.activeElement!==inp)inp.value=store.get('fveShellyPrice')||'';
     var gl=[['Včera',shellyRange(days,function(k){return k===yKey})],['Posl. 7 dní',shellyRange(days,function(k){return k>=w0&&k<today})],['Tento měsíc',shellyRange(days,function(k){return k.slice(0,7)===mKey})],['Minulý měsíc',shellyRange(days,function(k){return k.slice(0,7)===pKey})]];
-    $('shellySum').innerHTML=shTable(['Období','Odběr','Přetok'].concat(hasP?['Náklady']:[]),gl.map(function(r){var v=r[1];return [r[0],v?f1(v.imp):'–',v?f1(v.exp):'–'].concat(hasP?[v?kc(v.imp*pr):'–']:[])}));
+    $('shellySum').innerHTML=shTable(['Období','Odběr'].concat(hasP?['Náklady']:[]),gl.map(function(r){var v=r[1];return [r[0],v?f1(v.imp):'–'].concat(hasP?[v?kc(v.imp*pr):'–']:[])}));
     var empty=!keys.length;
     $('shellyBody').hidden=empty;$('shellyEmpty').hidden=!empty;
-    var notes=['Odběr a přetok jsou v kWh. Denní hodnoty vznikají z rozdílu odečtů v 0:00 (odebraná energie ze sítě a energie dodaná do sítě).'];
+    var notes=['Odběr je v kWh. Denní hodnoty vznikají z rozdílu odečtů v 0:00 (energie odebraná ze sítě).'];
     if(hasP)notes.push('Náklady jsou odhad při průměrné ceně '+f2(pr)+' Kč/kWh bez rozlišení VT a NT.');else notes.push('Pro odhad nákladů zadejte průměrnou cenu odběru.');
     if(R.resets.length)notes.push('Čítač Shelly byl '+fmtDT(R.resets[R.resets.length-1]*1000)+' vynulován; tento interval se nezapočítal.');
     notes.push('Hodnoty ze Shelly nejsou cejchovaný elektroměr; pro vyúčtování platí elektroměr distributora.');
@@ -2362,7 +2359,7 @@ details[open] summary { margin-bottom: 10px; }
       chart=mx>0?shBars(items,niceMax(mx),dim>16?5:1,'Denní odběr ze sítě v kWh, '+label,'den (nebo táhni prstem)'):'<p class="hint">V tomto měsíci zatím nejsou denní hodnoty.</p>';
       var cur=shellyRange(days,function(k2){return k2.slice(0,7)===mk}),lines=[];
       if(cur){
-        lines.push(['Odběr ze sítě',f1(cur.imp)+' kWh']);lines.push(['Přetok do sítě',f1(cur.exp)+' kWh']);
+        lines.push(['Odběr ze sítě',f1(cur.imp)+' kWh']);
         if(cur.full)lines.push(['Průměr za den',f1(cur.imp/cur.full)+' kWh']);
         if(cur.max)lines.push(['Nejvyšší den',shDay(cur.max.k)+' · '+f1(cur.max.imp)+' kWh']);
         if(hasP)lines.push(['Náklady (odhad)',kc(cur.imp*pr)]);
@@ -2385,7 +2382,7 @@ details[open] summary { margin-bottom: 10px; }
       var ks=Object.keys(days).filter(function(k2){return k2.slice(0,7)===mk&&days[k2].cov>=SH_FULL}).sort().reverse(),mx2=0;
       ks.forEach(function(k2){mx2=Math.max(mx2,days[k2].imp)});
       list='<ul class="sh-days" aria-label="Odběr po dnech">'+ks.map(function(k2){var oo=days[k2],pct=mx2>0?Math.max(2,Math.round(oo.imp/mx2*100)):2;
-        return '<li><span>'+shDay(k2)+'</span><span class="bar" aria-hidden="true"><i style="width:'+pct+'%"></i></span><b>'+(oo.est?'≈ ':'')+f1(oo.imp/1000)+' kWh'+(oo.exp>=50?' <small>přetok '+f1(oo.exp/1000)+'</small>':'')+'</b></li>'}).join('')+'</ul>';
+        return '<li><span>'+shDay(k2)+'</span><span class="bar" aria-hidden="true"><i style="width:'+pct+'%"></i></span><b>'+(oo.est?'≈ ':'')+f1(oo.imp/1000)+' kWh</b></li>'}).join('')+'</ul>';
       if(ks.some(function(k2){return days[k2].est}))estAny=true;
     }else if(v==='month'){
       var yy=shSel.y,its=[],mx3=0,rows=[],tI=0,tE=0,tn=0,tfull=0,cI=0,pI=0,both=0,anyLast=false,mm;
@@ -2395,14 +2392,14 @@ details[open] summary { margin-bottom: 10px; }
         its.push({l:MLET[mm-1],a:sm?sm.imp:0,b:sm?sm.exp:0,t:shTip(MN_CS[mm-1]+' '+yy,sm?sm.imp:0,sm?sm.exp:0,false,!sm)});if(sm){mx3=Math.max(mx3,sm.imp,sm.exp);if(sm.exp>0)legendB=true;tI+=sm.imp;tE+=sm.exp;tfull+=sm.full}
         if(lm2)anyLast=true;
         if(sm&&lm2&&lm2.imp>0&&sm.n>=new Date(yy,mm,0).getDate()-1&&lm2.n>=new Date(yy-1,mm,0).getDate()-1){cI+=sm.imp;pI+=lm2.imp;both++}
-        if(sm||lm2)rows.push([MN_CS[mm-1],sm?f1(sm.imp):'–',sm?f1(sm.exp):'–'].concat(hasP?[sm?kc(sm.imp*pr):'–']:[]).concat(anyLast||lm2?[lm2?f1(lm2.imp):'–']:[]));
+        if(sm||lm2)rows.push([MN_CS[mm-1],sm?f1(sm.imp):'–'].concat(hasP?[sm?kc(sm.imp*pr):'–']:[]).concat(anyLast||lm2?[lm2?f1(lm2.imp):'–']:[]));
       }
-      var lastCol=rows.some(function(r){return r.length>(hasP?4:3)});
-      var head=['Měsíc','Odběr','Přetok'].concat(hasP?['Náklady']:[]).concat(lastCol?['Loni']:[]);
+      var lastCol=rows.some(function(r){return r.length>(hasP?3:2)});
+      var head=['Měsíc','Odběr'].concat(hasP?['Náklady']:[]).concat(lastCol?['Loni']:[]);
       rows=rows.map(function(r){var need=head.length;while(r.length<need)r.push('–');return r});
-      var foot=['Celkem',f1(tI),f1(tE)].concat(hasP?[kc(tI*pr)]:[]).concat(lastCol?['']:[]);
+      var foot=['Celkem',f1(tI)].concat(hasP?[kc(tI*pr)]:[]).concat(lastCol?['']:[]);
       chart=mx3>0?shBars(its,niceMax(mx3),1,'Měsíční odběr ze sítě v kWh, '+label,'měsíc'):'<p class="hint">V tomto roce zatím nejsou data.</p>';
-      var lines2=[['Odběr ze sítě',f1(tI)+' kWh'],['Přetok do sítě',f1(tE)+' kWh']];
+      var lines2=[['Odběr ze sítě',f1(tI)+' kWh']];
       if(tfull)lines2.push(['Průměr za den',f1(tI/tfull)+' kWh']);
       if(hasP)lines2.push(['Náklady (odhad)',kc(tI*pr)]);
       if(both&&pI>0)lines2.push(['Oproti loňsku (jen úplné měsíce v obou letech)',pctStr(cI,pI)+' ('+kwhSigned(cI-pI)+')']);
@@ -2414,10 +2411,10 @@ details[open] summary { margin-bottom: 10px; }
       for(yv=fy;yv<=ly;yv++){
         var ry=shellyRange(days,function(k2){return k2.slice(0,4)===String(yv)});
         its2.push({l:String(yv),a:ry?ry.imp:0,b:ry?ry.exp:0,t:shTip(String(yv),ry?ry.imp:0,ry?ry.exp:0,false,!ry)});
-        if(ry){mx4=Math.max(mx4,ry.imp,ry.exp);if(ry.exp>0)legendB=true;rows2.push([String(yv),f1(ry.imp),f1(ry.exp),ry.full?f1(ry.imp/ry.full):'–'].concat(hasP?[kc(ry.imp*pr)]:[]))}
+        if(ry){mx4=Math.max(mx4,ry.imp,ry.exp);if(ry.exp>0)legendB=true;rows2.push([String(yv),f1(ry.imp),ry.full?f1(ry.imp/ry.full):'–'].concat(hasP?[kc(ry.imp*pr)]:[]))}
       }
       chart=mx4>0?shBars(its2,niceMax(mx4),1,'Roční odběr ze sítě v kWh','rok'):'';
-      list=rows2.length?shTable(['Rok','Odběr','Přetok','Ø/den'].concat(hasP?['Náklady']:[]),rows2):'';
+      list=rows2.length?shTable(['Rok','Odběr','Ø/den'].concat(hasP?['Náklady']:[]),rows2):'';
       per='';
     }
     $('shellyNav').hidden=!showNav;$('shellyNavLabel').textContent=label;$('shellyPrev').disabled=!canPrev;$('shellyNext').disabled=!canNext;
