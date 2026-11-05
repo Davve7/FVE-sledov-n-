@@ -429,6 +429,9 @@ details[open] summary { margin-bottom: 10px; }
 
   <div id="viewHome" class="pane" role="tabpanel" hidden>
     <div class="seg" id="periodSeg" role="group" aria-label="Období souhrnu"><button type="button" data-per="month">Tento měsíc</button><button type="button" data-per="cur">Tento rok</button><button type="button" data-per="prev">Loni</button><button type="button" data-per="all">Vše</button></div>
+  <section class="stats" aria-label="Odběr ze sítě podle Shelly" id="shellyStats" hidden>
+    <div class="stat"><span class="k">Odběr ze sítě (Shelly)</span><span class="v c-grid" id="shIn">–</span><span class="m c-cost" id="shInK"></span></div>
+  </section>
     <section class="stats" aria-label="Souhrn za vybrané období">
     <div class="stat"><span class="k">Vyrobeno (slunce)</span><span class="v c-sun" id="sTot">0,0 kWh</span><span class="m c-save" id="sTotK">Úspora: 0,0 Kč</span></div>
     <div class="stat"><span class="k">Dokoupeno (síť)</span><span class="v c-grid" id="sGrid">0,0 kWh</span><span class="m c-cost" id="sGridK">Náklady: 0,0 Kč</span></div>
@@ -436,9 +439,6 @@ details[open] summary { margin-bottom: 10px; }
     <div class="stat"><span class="k">Celková spotřeba</span><span class="v" id="sCon">0,0 kWh</span><span class="m c-sun" id="sShare">Podíl FVE: 0 %</span></div>
   </section>
 
-  <section class="stats" aria-label="Odběr ze sítě podle Shelly" id="shellyStats" hidden>
-    <div class="stat"><span class="k">Odběr ze sítě (Shelly)</span><span class="v c-grid" id="shIn">–</span><span class="m c-cost" id="shInK"></span></div>
-  </section>
 
   <section class="stats" aria-label="Přehled aktuálního roku" id="yearDashboard">
     <div class="stat"><span class="k">Výroba v aktuálním roce</span><span class="v c-sun" id="sYearEnergy">0,0 kWh</span><span class="m" id="sYearMonths">Záznamy: 0 měsíců</span></div>
