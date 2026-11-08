@@ -387,7 +387,7 @@ details[open] summary { margin-bottom: 10px; }
       <h2>Měsíční odečet elektroměru</h2>
       <p class="hint" id="meterHint">Zadávej aktuální stavy VT a NT poslední den v měsíci. Stavy pokračují mezi roky. U prvního záznamu vyplň počáteční stav z počátku sledovaného měsíce, aby se omylem nezapočítala historická spotřeba.</p>
       <label style="display:block;margin-bottom:12px"><input id="meterSplit" type="checkbox"> Zadávat VT a NT zvlášť</label>
-      <p class="hint" id="meterSplitNote" hidden>Předchozí odečet je zadaný celkem, proto pokračuj také celkem.</p>
+      <p class="hint" id="meterSplitNote" hidden>Předchozí odečet je zadaný celkem, proto pokračuj také celkem. Chceš VT a NT zvlášť? Smaž odečty zadané celkem (nemají rozdělení na VT a NT) a zadej je znovu s VT i NT.</p>
       <div class="row"><div class="field"><label for="meterDateDisplay">Datum odečtu</label><div class="date-picker-wrap"><input id="meterDate" class="native-date-value" type="date" tabindex="-1" aria-hidden="true" required><button id="meterDateDisplay" class="date-picker-display" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="meterCalendar"><span id="meterDateDisplayText">Vyber datum</span><span aria-hidden="true">▦</span></button><div id="meterCalendar" class="week-calendar" role="dialog" aria-label="Výběr data s čísly týdnů" hidden><div class="week-calendar-head"><button id="meterCalendarPrev" class="calendar-nav" type="button" aria-label="Předchozí měsíc">‹</button><div id="meterCalendarTitle" class="week-calendar-title"></div><button id="meterCalendarNext" class="calendar-nav" type="button" aria-label="Následující měsíc">›</button></div><div id="meterCalendarGrid" class="week-calendar-grid"></div><div class="calendar-week-caption">Čísla vlevo jsou ISO týdny (pondělí–neděle).</div></div></div></div></div>
       <div class="row"><div class="field"><label for="meterStartVT">Počáteční stav VT (kWh)</label><input id="meterStartVT" type="number" min="0" step="any" required></div><div class="field"><label for="meterVT">Nový stav VT (kWh)</label><input id="meterVT" type="number" min="0" step="any" required></div></div>
       <div class="row"><div class="field"><label for="meterStartNT">Počáteční stav NT (kWh)</label><input id="meterStartNT" type="number" min="0" step="any" required></div><div class="field"><label for="meterNT">Nový stav NT (kWh)</label><input id="meterNT" type="number" min="0" step="any" required></div></div>
@@ -429,14 +429,14 @@ details[open] summary { margin-bottom: 10px; }
 
   <div id="viewHome" class="pane" role="tabpanel" hidden>
     <div class="seg" id="periodSeg" role="group" aria-label="Období souhrnu"><button type="button" data-per="month">Tento měsíc</button><button type="button" data-per="cur">Tento rok</button><button type="button" data-per="prev">Loni</button><button type="button" data-per="all">Vše</button></div>
-  <section class="stats" aria-label="Odběr ze sítě podle Shelly" id="shellyStats" hidden>
-    <div class="stat"><span class="k">Odběr ze sítě (Shelly)</span><span class="v c-grid" id="shIn">–</span><span class="m c-cost" id="shInK"></span></div>
+  <section class="stats" aria-label="Odběr ze sítě a nabíjení auta">
+    <div class="stat" id="shellyStats" hidden><span class="k">Odběr ze sítě (Shelly)</span><span class="v c-grid" id="shIn">–</span><span class="m c-cost" id="shInK"></span></div>
+    <div class="stat"><span class="k">Nabíjení auta</span><span class="v" id="sCar">0,0 kWh</span><span class="m" id="sCarK">Náklady: 0 Kč</span></div>
   </section>
     <section class="stats" aria-label="Souhrn za vybrané období">
     <div class="stat"><span class="k">Vyrobeno (slunce)</span><span class="v c-sun" id="sTot">0,0 kWh</span><span class="m c-save" id="sTotK">Úspora: 0,0 Kč</span></div>
     <div class="stat"><span class="k">Dokoupeno (síť)</span><span class="v c-grid" id="sGrid">0,0 kWh</span><span class="m c-cost" id="sGridK">Náklady: 0,0 Kč</span></div>
-    <div class="stat"><span class="k">Nabíjení auta</span><span class="v" id="sCar">0,0 kWh</span><span class="m" id="sCarK">Náklady: 0 Kč</span></div>
-    <div class="stat"><span class="k">Celková spotřeba</span><span class="v" id="sCon">0,0 kWh</span><span class="m c-sun" id="sShare">Podíl FVE: 0 %</span></div>
+    <div class="stat"><span class="k">Celková spotřeba ohřev TUV</span><span class="v" id="sCon">0,0 kWh</span><span class="m c-sun" id="sShare">Podíl FVE: 0 %</span></div>
   </section>
 
 
@@ -1551,7 +1551,8 @@ details[open] summary { margin-bottom: 10px; }
      takže všechny výpočty, grafy a zálohy fungují beze změny. */
   function r6(x){return Math.round(x*1e6)/1e6}
   function totalOf(r){return r6((+r.vt||0)+(+r.nt||0))}
-  function meterSplitPref(){return store.get('fveMeterSplit')==='1'}
+  function meterSplitPref(){return store.get('fveMeterSplit')!=='0'}
+  if(store.get('fveMeterSplitDef')!=='28'){if(store.get('fveMeterSplit')==='0')store.set('fveMeterSplit','1');store.set('fveMeterSplitDef','28')}
   var meterSplitNow=meterSplitPref(),meterLocked=false;
   function lbl(id,txt){var e=document.querySelector('label[for='+id+']');if(e)e.textContent=txt}
   function applyMeterMode(){
@@ -1902,7 +1903,7 @@ details[open] summary { margin-bottom: 10px; }
 
   $('exportMonthly').addEventListener('click',function(){
     var ys=allYears();sortedByDate(meterReadings).concat(sortedByDate(chargeReadings)).forEach(function(r){var y=Number(r.date.slice(0,4));if(ys.indexOf(y)<0)ys.push(y)});Object.keys(shellyR().days).forEach(function(k){var y=Number(k.slice(0,4));if(ys.indexOf(y)<0)ys.push(y)});ys.sort();
-    var rows=[['Rok','Měsíc','Výroba FVE (kWh)','Dokup ze sítě (kWh)','Spotřeba celkem (kWh)','Podíl FVE (%)','Úspora FVE (Kč)','Náklady dokup (Kč)','Elektroměr VT (kWh)','Elektroměr NT (kWh)','Elektroměr celkem (kWh)','Náklady elektroměr (Kč)','Nabíjení auta (kWh)','Nabíjení auta (Kč)','Shelly odběr (kWh)']],n=0;
+    var rows=[['Rok','Měsíc','Výroba FVE (kWh)','Dokup ze sítě (kWh)','Spotřeba ohřev TUV (kWh)','Podíl FVE (%)','Úspora FVE (Kč)','Náklady dokup (Kč)','Elektroměr VT (kWh)','Elektroměr NT (kWh)','Elektroměr celkem (kWh)','Náklady elektroměr (Kč)','Nabíjení auta (kWh)','Nabíjení auta (Kč)','Shelly odběr (kWh)']],n=0;
     function cell(x){return '"'+String(x==null?'':x).replace(/"/g,'""')+'"'}
     function num(x){return x==null?'':String(Math.round(x*100)/100).replace('.',',')}
     ys.forEach(function(y){for(var m=1;m<=12;m++){
@@ -2063,7 +2064,7 @@ details[open] summary { margin-bottom: 10px; }
     var con=T.e+T.g,sum=[];
     function line(k,v){sum.push([k,v])}
     line('Výroba FVE',f1(T.e)+' kWh');line('Dokup ze sítě (FVE odečty)',f1(T.g)+' kWh');
-    if(con>0)line('Podíl FVE na spotřebě',Math.round(T.e/con*100)+' %');
+    if(con>0)line('Podíl FVE na spotřebě (ohřev TUV)',Math.round(T.e/con*100)+' %');
     line('Úspora díky FVE',kc(T.s));line('Náklady na dokup',kc(T.c));
     if(T.vt+T.nt>0){if(T.sp)line('Elektroměr VT / NT',f1(T.vt)+' / '+f1(T.nt)+' kWh');else line('Elektroměr celkem',f1(T.vt+T.nt)+' kWh');line('Náklady podle elektroměru',kc(T.mc))}
     if(anySh){var sp=shellyPrice();line('Odběr ze sítě (Shelly)',f1(T.si)+' kWh'+(sp>0?' · '+kc(T.si*sp):''))}

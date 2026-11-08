@@ -1,7 +1,7 @@
 # Sledování elektřiny
 Nahraj všech 7 souborů (index.html, manifest.webmanifest, sw.js, apple-touch-icon.png, icon-192.png, icon-512.png, README.md; soubor shelly-pro3em.js nahrávat nemusíš, je to kopie skriptu pro Shelly) do kořene repozitáře na GitHubu. Starý `icon-512.PNG` a soubory `.txt` smaž.
 Na iPhonu otevři stránku v Safari -> Sdílet -> Přidat na plochu.
-Po aktualizaci aplikaci na iPhonu zavři (přejetím nahoru) a otevři znovu; případně ji jednou otevři v Safari, ať se nahraje nová verze (cache fve-v27).
+Po aktualizaci aplikaci na iPhonu zavři (přejetím nahoru) a otevři znovu; případně ji jednou otevři v Safari, ať se nahraje nová verze (cache fve-v28).
 Roční shrnutí: tlačítko „Otevřít report · PDF“ otevře náhled. „Uložit / sdílet PDF“ na iPhonu otevře sdílení (Uložit do Souborů), na počítači stáhne PDF; „Sdílet text“ / „Zkopírovat text“ pošle shrnutí jako text; „Tisk“ je jen mimo iPhone.
 
 Automatický odečet ze Shelly Pro 3EM (jednou denně v 0:00):
@@ -15,9 +15,11 @@ Denní sledování (Elektřina → Odběr ze sítě (Shelly Pro 3EM)):
 - Přepínač Den / Měsíc / Rok: Den = sloupce po dnech za zvolený měsíc (šipky ‹ › listují měsíci), Měsíc = 12 měsíců roku, Rok = roky.
 - Nahoře přehled Včera / Posl. 7 dní / Tento měsíc / Minulý měsíc a srovnání s minulým obdobím (proti loňsku srovnává jen úplné měsíce).
 - Pole „Průměrná cena odběru (Kč/kWh)“: Shelly neumí VT/NT, náklady se proto počítají z jedné průměrné ceny. Měsíční odečet elektroměru s VT/NT zůstává ručně, jak byl.
-- Úvodní stránka (karty Odběr a Přetok podle zvoleného období), roční shrnutí a PDF mají sloupec „Shelly odběr“; CSV obsahuje řádky „Shelly den“, JSON záloha obsahuje odečty ze Shelly.
+- Úvodní stránka (karta Odběr podle zvoleného období), roční shrnutí a PDF mají sloupec „Shelly odběr“; CSV obsahuje řádky „Shelly den“, JSON záloha obsahuje odečty ze Shelly.
 
-Měsíční odečet elektroměru (záložka Zadat): ve výchozím stavu se zadává jen celkový stav elektroměru (součet VT a NT) a jedna průměrná cena. Volba „Zadávat VT a NT zvlášť“ vrací původní zadávání. Starší odečty s VT a NT zůstávají beze změny a po nich lze pokračovat celkovým stavem (počáteční stav se spočítá jako VT + NT). Po odečtu zadaném celkem už nelze přejít zpět na VT/NT. Ceník se v tomto režimu zadává jako jedna cena. Export po měsících má nový sloupec „Elektroměr celkem (kWh)“.
+Měsíční odečet elektroměru (záložka Zadat): ve výchozím stavu se zadávají VT a NT zvlášť (dvě pole stavu, dvě ceny). Volba „Zadávat VT a NT zvlášť“ jde vypnout, pak se zadává jen celkový stav (VT + NT) a jedna průměrná cena. Po odečtu zadaném celkem už nelze přejít zpět na VT/NT; v tom případě odečty zadané celkem smaž a zadej je znovu s VT i NT. Export po měsících má sloupec „Elektroměr celkem (kWh)“.
+
+Úvodní stránka: pořadí karet je Odběr ze sítě (Shelly) → Nabíjení auta → Vyrobeno → Dokoupeno → Celková spotřeba ohřev TUV (výroba FVE + dokup ze sítě z týdenních odečtů FVE, s podílem FVE). Karta Odběr ze sítě se zobrazí jen tehdy, když jsou k dispozici data ze Shelly.
 
 Grafy (výroba FVE, spotřeba elektroměru, nabíjení auta, odběr ze Shelly): klepnutím na sloupec se pod grafem zobrazí hodnota daného měsíce (u Shelly dne nebo roku) a sloupec se zvýrazní. V denním grafu Shelly lze po sloupcích táhnout prstem.
 
