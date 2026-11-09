@@ -645,6 +645,12 @@ details[open] summary { margin-bottom: 10px; }
           <button type="button" class="btn ghost" id="doImport">Načíst data</button>
         </div>
         <div class="field">
+          <label for="widgetJson">Widget na ploše iPhonu</label>
+          <div class="acts"><button type="button" class="btn ghost" id="widgetJson">Uložit přehled pro widget</button></div>
+          <p class="hint">V nabídce zvol <b>Uložit do Souborů → iCloud Drive → Scriptable</b>. Když se zeptá na stejný soubor, zvol <b>Nahradit</b>.</p>
+          <p class="status" id="wStatus" role="status" aria-live="polite"></p>
+        </div>
+        <div class="field">
           <label for="cloudFile">Nebo vyberte soubor se zálohou</label>
           <input type="file" id="cloudFile">
         </div>
@@ -1156,6 +1162,34 @@ details[open] summary { margin-bottom: 10px; }
     }
     anchorDownload(filename, blob);
   }
+  /* ---------- přehled pro widget na ploše (Scriptable čte prehled-*.json) ---------- */
+  var WMN = ['leden','únor','březen','duben','květen','červen','červenec','srpen','září','říjen','listopad','prosinec'];
+  function widgetMonthEnergy(yr, mo) {
+    var o = { e: 0, g: 0, c: 0 }, monthly = false;
+    V().forEach(function (x) { if (x.year === yr && x.month === mo) { monthly = true; o.e += x.energy; o.g += x.grid; o.c += gridCost(x); } });
+    if (!monthly) { var q = weeklyPeriodTotals(yr, mo); if (q.n) { o.e += q.e; o.g += q.g; o.c += q.c; } }
+    return o;
+  }
+  function widgetJsonText() {
+    var now = new Date(), y = now.getFullYear(), mo = now.getMonth() + 1, mk = y + '-' + String(mo).padStart(2, '0');
+    var en = widgetMonthEnergy(y, mo), car = { k: 0, c: 0 };
+    carRows().forEach(function (r) { if (r.date.slice(0, 7) === mk) { car.k += r.kwh; car.c += carCost(r); } });
+    var udaje = [
+      { popis: 'Nabíjení auta · ' + WMN[mo - 1], hodnota: f1(car.k) + ' kWh · ' + kc(car.c) },
+      { popis: 'Výroba FVE', hodnota: f1(en.e) + ' kWh' },
+      { popis: 'Dokup ze sítě', hodnota: f1(en.g) + ' kWh · ' + kc(en.c) }
+    ];
+    var w = sortedByDate(typeof weeklyReadings !== 'undefined' ? weeklyReadings : []);
+    if (w.length) udaje.push({ popis: 'Poslední odečet FVE', datum: String(w[w.length - 1].date).slice(0, 10) });
+    return JSON.stringify({ prehled: 1, app: 'elektrina', nazev: 'Elektřina', ulozeno: now.toISOString(), mesic: mk, polozky: [], udaje: udaje }, null, 1);
+  }
+  $('widgetJson').addEventListener('click', function () {
+    var name = 'prehled-elektrina.json', blob = new Blob([widgetJsonText()], { type: 'application/json' });
+    (isIos() ? shareBlob(name, blob, 'application/json', name) : Promise.resolve('unsupported')).then(function (r) {
+      if (r === 'unsupported' || r === 'failed') anchorDownload(name, blob);
+      if (r !== 'cancelled') say('wStatus', 'Přehled pro widget je připravený.');
+    });
+  });
   $('downloadJson').addEventListener('click', function () {
     var weeks = typeof weeklyReadings !== 'undefined' ? weeklyReadings : [];
     var meters = typeof meterReadings !== 'undefined' ? meterReadings : [];
