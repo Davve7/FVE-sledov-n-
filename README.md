@@ -1,7 +1,7 @@
 # Sledování elektřiny
 Nahraj všech 7 souborů (index.html, manifest.webmanifest, sw.js, apple-touch-icon.png, icon-192.png, icon-512.png, README.md; soubor shelly-pro3em.js nahrávat nemusíš, je to kopie skriptu pro Shelly) do kořene repozitáře na GitHubu. Starý `icon-512.PNG` a soubory `.txt` smaž.
 Na iPhonu otevři stránku v Safari -> Sdílet -> Přidat na plochu.
-Po aktualizaci aplikaci na iPhonu zavři (přejetím nahoru) a otevři znovu; případně ji jednou otevři v Safari, ať se nahraje nová verze (cache fve-v30).
+Po aktualizaci aplikaci na iPhonu zavři (přejetím nahoru) a otevři znovu; případně ji jednou otevři v Safari, ať se nahraje nová verze (cache fve-v31).
 Roční shrnutí: tlačítko „Otevřít report · PDF“ otevře náhled. „Uložit / sdílet PDF“ na iPhonu otevře sdílení (Uložit do Souborů), na počítači stáhne PDF; „Sdílet text“ / „Zkopírovat text“ pošle shrnutí jako text; „Tisk“ je jen mimo iPhone.
 
 Automatický odečet ze Shelly Pro 3EM (jednou denně v 0:00):
@@ -20,6 +20,8 @@ Denní sledování (Elektřina → Odběr ze sítě (Shelly Pro 3EM)):
 Měsíční odečet elektroměru (záložka Zadat): ve výchozím stavu se zadávají VT a NT zvlášť (dvě pole stavu, dvě ceny). Volba „Zadávat VT a NT zvlášť“ jde vypnout, pak se zadává jen celkový stav (VT + NT) a jedna průměrná cena. Z odečtů zadaných celkem lze kdykoli přejít na VT/NT: zaškrtni „Zadávat VT a NT zvlášť“ a zadej první odečet s VT a NT. Počáteční stavy VT a NT z minulého odečtu vyplň, pokud je znáš; když je necháš prázdné, VT a NT se sleduje od tohoto odečtu (spotřeba od minulého celkového odečtu se do VT/NT nezapočítá). Takový odečet je v seznamu označený „začátek VT/NT“. Návrat z VT/NT zpět na zadávání celkem už možný není. Export po měsících má sloupec „Elektroměr celkem (kWh)“.
 
 Odběr ze sítě bez auta: na kartě Odběr ze sítě (záložka Elektřina) je volba „Odečíst nabíjení auta (z karty Auto)“. Když je zaškrtnutá, odečte se od denního odběru ze Shelly součet nabití zadaných v kartě Auto za stejný den (nejvýše tolik, kolik Shelly ten den naměřil). Platí pro kartu Shelly v záložce Elektřina i pro kartu na úvodní stránce (ta se pak jmenuje „Odběr ze sítě bez auta (Shelly)“). Report a exporty zůstávají se surovými hodnotami ze Shelly. Pokud auto nabíjíš i z FVE, je odečet nadsazený, protože Shelly měří jen odběr ze sítě.
+
+Denní přehled odběru (záložka Elektřina, Den): dny s odběrem vyšším, než je průměr za den ve vybraném měsíci, jsou v grafu i v seznamu dnů červené (jen dny s pokrytím aspoň 12 h; průměr je ten, který se vypisuje pod grafem). V tabulce období je sloupec „Z toho auto“ (kolik z odběru připadá na nabíjení auta zadané v kartě Auto za stejný den, nejvýše tolik, kolik Shelly ten den naměřil) a pod grafem řádek „Z toho nabíjení auta“ s podílem v %. Při zaškrtnuté volbě „Odečíst nabíjení auta“ se sloupec jmenuje „Odečteno auto“ a červené dny se určují podle odběru bez auta.
 
 Úvodní stránka: pořadí karet je Odběr ze sítě (Shelly) → Nabíjení auta → Vyrobeno → Dokoupeno → Celková spotřeba ohřev TUV (výroba FVE + dokup ze sítě z týdenních odečtů FVE, s podílem FVE). Karta Odběr ze sítě se zobrazí jen tehdy, když jsou k dispozici data ze Shelly.
 
